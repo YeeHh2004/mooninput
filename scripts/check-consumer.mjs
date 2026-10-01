@@ -19,7 +19,7 @@ try{
       const norm=text=>text.replaceAll('\r\n','\n');
       assert.equal(norm(readFileSync(join(downloaded,name),'utf8')),norm(readFileSync(join(root,name),'utf8')),`Published source: ${name}`);
     }
-  }else writeFileSync(join(workspace,'moon.work'),`members = [${JSON.stringify(root)}, "consumer"]\n`);
+  }else writeFileSync(join(workspace,'moon.work'),`members = [\n  ${JSON.stringify(root)},\n  "consumer",\n]\n`);
   run(['fmt','--check']);
   for(const target of ['js','wasm-gc']){
     process.stdout.write(run(['test','--target',target]));

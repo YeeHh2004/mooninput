@@ -1,0 +1,67 @@
+name: Test MoonInput
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22'
+          - os: windows-latest
+            node: '22'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: hustcer/setup-moonbit@9199da0ab63ea0c0bab1dc15f03d76e17ed4f75f # v1.22
+        with:
+          version: '0.10.14+7d59c7ec9'
+          core-version: '0.10.14+7d59c7ec9'
+      - run: moon version --all
+      - run: moon fmt --check
+      - run: moon check --target js
+      - run: moon check --target wasm-gc
+      - run: moon info
+      - run: git diff --exit-code -- '*.mbti'
+      - run: moon test --target js
+      - run: moon test --target wasm-gc
+      - run: moon build --target wasm-gc
+      - run: node scripts/build.mjs
+      - run: node --test tests/*.test.mjs
+      - run: node scripts/check-consumer.mjs
+      - run: python scripts/check-mooncake.py
+      - run: node scripts/check-examples.mjs
+      - name: Measure core coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          moon coverage analyze -- -f summary -p YeeHh2004/mooninput
+          moon coverage report -f cobertura -p YeeHh2004/mooninput -o _build/core-coverage.xml
+      - name: Install browser test runner
+        if: matrix.os == 'ubuntu-latest'
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - name: Install Chromium
+        if: matrix.os == 'ubuntu-latest'
+        run: npx playwright install --with-deps chromium
+      - name: Browser acceptance
+        if: matrix.os == 'ubuntu-latest'
+        run: node tests/browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: mooninput-web
+          path: web/
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.os == 'ubuntu-latest'
+        with:
+          name: verification-evidence
+          path: |
+            _build/core-coverage.xml
+            dist/browser-results.json
+            dist/browser-screenshots/

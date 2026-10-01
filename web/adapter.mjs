@@ -1,4 +1,5 @@
 import {process as processInput} from './mooninput.mjs';
+const attached=new WeakSet();
 
 // This file transports events and selections. All value rules are in MoonBit.
 export function createEditor(config, initial = '') {
@@ -32,7 +33,9 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
     throw new TypeError('bindInput requires a text-like input with selection APIs');
   }
   if (!Number.isInteger(historyLimit)||historyLimit<1||historyLimit>1000) throw new RangeError('historyLimit must be 1..1000');
+  if(attached.has(element))throw new Error('Destroy the previous binding before rebinding this input');
   const editor=createEditor(config,element.value);
+  attached.add(element);
   const listeners=[];
   let composing=false, disposed=false;
   let past=[], future=[];
@@ -111,6 +114,6 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
     get state(){return editor.state;},
     setValue(value){return transition('set',value,{start:0,end:0});},
     undo,redo,
-    destroy(){if(disposed)return; disposed=true;for(const [name,fn]of listeners)element.removeEventListener(name,fn);past=[];future=[];}
+    destroy(){if(disposed)return; disposed=true;attached.delete(element);for(const [name,fn]of listeners)element.removeEventListener(name,fn);past=[];future=[];}
   };
 }

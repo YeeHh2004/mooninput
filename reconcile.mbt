@@ -8,6 +8,13 @@ pub fn Editor::reconcile(
   start : Int,
   end : Int,
 ) -> Result[Editor, InputError] {
+  let limit = match self.mask.kind {
+    DecimalKind(_, _, _) => 512
+    _ => 8192
+  }
+  if text.length() > limit {
+    return Err(TooLong(limit))
+  }
   if start < 0 || end < start || end > text.length() {
     return Err(InvalidSelection)
   }
