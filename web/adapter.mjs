@@ -47,7 +47,7 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
   }
   function transition(op,text='',selection=readSelection()) {
     if (disposed) throw new Error('binding has been destroyed');
-    const before={...editor.state,...selection};
+    const before=op==='reconcile'?editor.state:{...editor.state,...selection};
     const result=editor.apply(op,text,selection.start,selection.end);
     if (result.ok && (before.raw!==editor.state.raw)) {
       past.push(before); if(past.length>historyLimit)past.shift(); future=[];

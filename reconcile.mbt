@@ -13,7 +13,42 @@ pub fn Editor::reconcile(
   }
   let next = match self.set_value(text) {
     Ok(e) => e
-    Err(e) => return Err(e)
+    Err(_) => {
+      // Native input may leave previously generated separators in old positions.
+      // Recover the single contiguous edit instead of treating that transient
+      // display as a new, incorrectly grouped value.
+      let old_chars = self.display().to_array()
+      let new_chars = text.to_array()
+      let mut prefix = 0
+      while prefix < old_chars.length() &&
+            prefix < new_chars.length() &&
+            old_chars[prefix] == new_chars[prefix] {
+        prefix += 1
+      }
+      let mut suffix = 0
+      while suffix < old_chars.length() - prefix &&
+            suffix < new_chars.length() - prefix &&
+            old_chars[old_chars.length() - 1 - suffix] ==
+            new_chars[new_chars.length() - 1 - suffix] {
+        suffix += 1
+      }
+      let mut from = 0
+      for i in 0..<prefix {
+        from += old_chars[i].utf16_len()
+      }
+      let mut to = from
+      for i in prefix..<(old_chars.length() - suffix) {
+        to += old_chars[i].utf16_len()
+      }
+      let inserted : Array[Char] = []
+      for i in prefix..<(new_chars.length() - suffix) {
+        inserted.push(new_chars[i])
+      }
+      return match self.select(from, to) {
+        Ok(selected) => selected.insert(String::from_array(inserted))
+        Err(e) => Err(e)
+      }
+    }
   }
   let before_start : Array[Char] = []
   let before_end : Array[Char] = []
