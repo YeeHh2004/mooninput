@@ -11,7 +11,7 @@ try{
   cpSync(new URL('../examples/consumer/',import.meta.url),consumer,{recursive:true,filter:source=>!/[\\/](_build|\.mooncakes)([\\/]|$)/.test(source)});
   const run=args=>execFileSync('moon',args,{cwd:consumer,encoding:'utf8',stdio:['ignore','pipe','inherit']});
   if(registry){
-    writeFileSync(join(consumer,'moon.mod'),'name = "mooninput-examples/consumer"\nversion = "0.1.0"\n');
+    writeFileSync(join(consumer,'moon.mod'),'name = "mooninput-examples/consumer"\n\nversion = "0.1.0"\n');
     run(['add','YeeHh2004/mooninput@0.1.0']);
     run(['build','--target','js']);
     const downloaded=join(consumer,'.mooncakes','YeeHh2004','mooninput');
