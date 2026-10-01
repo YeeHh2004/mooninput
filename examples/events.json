@@ -1,0 +1,9 @@
+{
+  "config": { "kind": "date" },
+  "value": "20230229",
+  "steps": [
+    { "op": "insert", "start": 3, "end": 4, "text": "4" },
+    { "op": "select", "start": 8, "end": 10 },
+    { "op": "insert", "text": "28" }
+  ]
+}
