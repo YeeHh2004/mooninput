@@ -49,12 +49,13 @@ pub fn Editor::status(self : Editor) -> Status {
     return Empty
   }
   match self.mask.kind {
-    PatternKind(p) | DateKind(p) =>
+    PatternKind(p) =>
       if n == p.required || n == p.slots.length() {
         Complete
       } else {
         Incomplete
       }
+    DateKind(_) => date_status(self.render.raw)
     DecimalKind(_, _, _) => decimal_status(self.render.raw)
   }
 }
@@ -232,6 +233,7 @@ pub fn Editor::value(self : Editor) -> Result[String, InputError] {
     Invalid(reason) => Err(InvalidValue(reason))
     Complete =>
       match self.mask.kind {
+        DateKind(_) => Ok(self.display())
         DecimalKind(_, _, _) => Ok(decimal_value(self.render.raw))
         _ => Ok(self.raw())
       }

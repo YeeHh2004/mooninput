@@ -1,0 +1,79 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "YeeHh2004/mooninput"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn decimal(precision? : Int, signed? : Bool, grouped? : Bool) -> Result[Mask, InputError]
+
+pub fn iso_date() -> Mask
+
+pub fn pattern(String) -> Result[Mask, InputError]
+
+// Errors
+
+// Types and methods
+pub struct Editor {
+  // private fields
+}
+pub fn Editor::backspace(Self) -> Result[Self, InputError]
+pub fn Editor::delete_forward(Self) -> Result[Self, InputError]
+pub fn Editor::display(Self) -> String
+pub fn Editor::display_offset(Self, Int) -> Result[Int, InputError]
+pub fn Editor::insert(Self, String) -> Result[Self, InputError]
+pub fn Editor::new(Mask, initial? : String) -> Result[Self, InputError]
+pub fn Editor::raw(Self) -> String
+pub fn Editor::raw_index(Self, Int) -> Result[Int, InputError]
+pub fn Editor::select(Self, Int, Int) -> Result[Self, InputError]
+pub fn Editor::selection(Self) -> Selection
+pub fn Editor::set_value(Self, String) -> Result[Self, InputError]
+pub fn Editor::status(Self) -> Status
+pub fn Editor::value(Self) -> Result[String, InputError]
+
+pub(all) enum InputError {
+  InvalidPattern(String)
+  InvalidCharacter(Int, String)
+  TooLong(Int)
+  InvalidSelection
+  InvalidConfig(String)
+  InvalidValue(String)
+} derive(Eq, @debug.Debug)
+pub fn InputError::equal(Self, Self) -> Bool
+pub fn InputError::message(Self) -> String
+pub fn InputError::not_equal(Self, Self) -> Bool
+pub fn InputError::to_repr(Self) -> @debug.Repr
+
+type Kind
+
+pub struct Mask {
+  // private fields
+}
+pub fn Mask::format(Self, String) -> Result[String, InputError]
+
+type Pattern
+
+type Render
+
+pub(all) struct Selection {
+  start : Int
+  end : Int
+} derive(Eq, @debug.Debug)
+pub fn Selection::equal(Self, Self) -> Bool
+pub fn Selection::not_equal(Self, Self) -> Bool
+pub fn Selection::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Status {
+  Empty
+  Incomplete
+  Complete
+  Invalid(String)
+} derive(Eq, @debug.Debug)
+pub fn Status::equal(Self, Self) -> Bool
+pub fn Status::not_equal(Self, Self) -> Bool
+pub fn Status::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
