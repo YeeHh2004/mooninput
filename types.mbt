@@ -30,17 +30,17 @@ priv enum Slot {
   Letter
   Alnum
   Printable
-} derive(Eq, @debug.Debug)
+}
 
 ///|
-struct Pattern {
+priv struct Pattern {
   slots : Array[Slot]
   prefixes : Array[String]
   required : Int
 }
 
 ///|
-enum Kind {
+priv enum Kind {
   PatternKind(Pattern)
   DateKind(Pattern)
   DecimalKind(Int, Bool, Bool)
@@ -53,7 +53,7 @@ pub struct Mask {
 }
 
 ///|
-struct Render {
+priv struct Render {
   raw : Array[Char]
   display : String
   starts : Array[Int]

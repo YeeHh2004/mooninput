@@ -26,6 +26,7 @@ pub fn Editor::insert(Self, String) -> Result[Self, InputError]
 pub fn Editor::new(Mask, initial? : String) -> Result[Self, InputError]
 pub fn Editor::raw(Self) -> String
 pub fn Editor::raw_index(Self, Int) -> Result[Int, InputError]
+pub fn Editor::reconcile(Self, String, Int, Int) -> Result[Self, InputError]
 pub fn Editor::select(Self, Int, Int) -> Result[Self, InputError]
 pub fn Editor::selection(Self) -> Selection
 pub fn Editor::set_value(Self, String) -> Result[Self, InputError]
@@ -45,16 +46,10 @@ pub fn InputError::message(Self) -> String
 pub fn InputError::not_equal(Self, Self) -> Bool
 pub fn InputError::to_repr(Self) -> @debug.Repr
 
-type Kind
-
 pub struct Mask {
   // private fields
 }
 pub fn Mask::format(Self, String) -> Result[String, InputError]
-
-type Pattern
-
-type Render
 
 pub(all) struct Selection {
   start : Int

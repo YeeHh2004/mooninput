@@ -1,0 +1,4 @@
+import {
+  "YeeHh2004/mooninput" @input,
+  "moonbitlang/core/json",
+}
