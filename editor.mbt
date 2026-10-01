@@ -6,7 +6,8 @@ fn Mask::render_input(self : Mask, text : String) -> Result[Render, InputError] 
         Ok(raw) => Ok(render_pattern(p, raw))
         Err(e) => Err(e)
       }
-    DecimalKind(_, _, _) => Err(InvalidConfig("decimal implementation pending"))
+    DecimalKind(precision, signed, grouped) =>
+      parse_decimal(text, precision, signed, grouped)
   }
 }
 
@@ -54,7 +55,7 @@ pub fn Editor::status(self : Editor) -> Status {
       } else {
         Incomplete
       }
-    DecimalKind(_, _, _) => Incomplete
+    DecimalKind(_, _, _) => decimal_status(self.render.raw)
   }
 }
 
@@ -135,7 +136,11 @@ fn Editor::replace_raw(
 ) -> Result[Editor, InputError] {
   let inserted = match self.mask.kind {
     PatternKind(p) | DateKind(p) => parse_pattern(p, text, start)
-    DecimalKind(_, _, _) => Err(InvalidConfig("decimal implementation pending"))
+    DecimalKind(precision, signed, grouped) =>
+      match parse_decimal(text, precision, signed, grouped) {
+        Ok(render) => Ok(render.raw)
+        Err(e) => Err(e)
+      }
   }
   let inserted = match inserted {
     Ok(chars) => chars
@@ -157,7 +162,8 @@ fn Editor::replace_raw(
         Ok(chars) => Ok(render_pattern(p, chars))
         Err(e) => Err(e)
       }
-    DecimalKind(_, _, _) => Err(InvalidConfig("decimal implementation pending"))
+    DecimalKind(precision, signed, grouped) =>
+      render_decimal(raw, precision, signed, grouped)
   }
   match rendered {
     Err(e) => Err(e)
@@ -224,7 +230,11 @@ pub fn Editor::value(self : Editor) -> Result[String, InputError] {
     Empty => Err(InvalidValue("empty"))
     Incomplete => Err(InvalidValue("incomplete"))
     Invalid(reason) => Err(InvalidValue(reason))
-    Complete => Ok(self.raw())
+    Complete =>
+      match self.mask.kind {
+        DecimalKind(_, _, _) => Ok(decimal_value(self.render.raw))
+        _ => Ok(self.raw())
+      }
   }
 }
 

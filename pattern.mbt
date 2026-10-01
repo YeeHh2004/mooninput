@@ -173,6 +173,10 @@ pub fn Mask::format(self : Mask, text : String) -> Result[String, InputError] {
         Ok(raw) => Ok(render_pattern(p, raw).display)
         Err(e) => Err(e)
       }
-    DecimalKind(_, _, _) => Err(InvalidConfig("decimal implementation pending"))
+    DecimalKind(precision, signed, grouped) =>
+      match parse_decimal(text, precision, signed, grouped) {
+        Ok(render) => Ok(render.display)
+        Err(e) => Err(e)
+      }
   }
 }
