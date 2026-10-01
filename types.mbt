@@ -96,3 +96,12 @@ pub extend Selection with @debug.Debug::{to_repr}
 
 ///|
 pub extend Status with @debug.Debug::{to_repr}
+
+///|
+pub extend InputError with Eq::{equal, not_equal}
+
+///|
+pub extend Selection with Eq::{equal, not_equal}
+
+///|
+pub extend Status with Eq::{equal, not_equal}
