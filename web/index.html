@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MoonInput 是 MoonBit 原生的结构化输入编辑库。体验手机号、金额、日期与业务编号的格式处理。">
+  <meta name="theme-color" content="#edf5f1">
+  <title>MoonInput · 让输入恰到好处</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true">m<span>i</span></span> MoonInput</a><nav aria-label="导航"><a href="#examples">试一试</a><a href="https://github.com/YeeHh2004/mooninput#readme">文档</a><a class="repo-link" href="https://github.com/YeeHh2004/mooninput">GitHub <span aria-hidden="true">↗</span></a></nav></header>
+  <main>
+    <section class="hero">
+      <div class="eyebrow"><span class="dot"></span> MOONBIT NATIVE · OPEN SOURCE</div>
+      <h1>让输入，<br><span>恰到好处。</span></h1>
+      <p class="lead">分隔符自动就位，光标跟随编辑。<br>把手机号、金额、日期与编号的输入细节，交给一个可复用的引擎。</p>
+      <div class="hero-actions"><a class="button primary" href="#examples">体验输入 <span aria-hidden="true">↓</span></a><a class="text-link" href="https://github.com/YeeHh2004/mooninput/blob/main/docs/API.md">查看接入方式 ↗</a></div>
+      <div class="hero-art" aria-hidden="true"><div class="art-label">从每一次按键，到正确的值</div><div class="art-input"><span>2026</span><i>−</i><span>10</span><i>−</i><span>02</span><b></b></div><div class="art-caption"><span class="small-dot"></span> 输入有序 · 编辑自由</div><div class="orbit one"></div><div class="orbit two"></div></div>
+    </section>
+    <section id="examples" class="examples">
+      <div class="section-title"><div><p class="eyebrow">ONE ENGINE, EVERYDAY INPUTS</p><h2>三个场景，直接上手</h2></div><p>试试粘贴、选中替换，或把光标移到中间。<br>所有操作仅在本页运行。</p></div>
+      <noscript><p class="notice">需要启用 JavaScript 才能运行由 MoonBit 编译的交互示例。</p></noscript>
+      <div id="load-error" class="notice" hidden role="alert"></div>
+      <div class="cards">
+        <article class="card"><div class="card-top"><span class="number">01</span><span class="category">联系信息</span><span class="icon" aria-hidden="true">↗</span></div><h3>号码更好读，也好改</h3><p class="description">输入或粘贴 11 位数字，自动按 3–4–4 分组。提交时保留纯数字。</p><form id="contact-form" novalidate><label for="phone">联系电话 <span>示例格式</span></label><input id="phone" type="tel" inputmode="numeric" autocomplete="off" placeholder="138 0013 8000" aria-describedby="phone-hint phone-error"><p class="hint" id="phone-hint">仅约束位数与格式，不验证号码归属或可用性。</p><div class="feedback"><span id="phone-status" class="status"></span><span id="phone-error" class="error" role="status"></span></div><div class="value-row"><span>提交值</span><output id="phone-value">—</output></div><div class="card-actions"><button class="button secondary" type="button" data-fill="phone">填入示例</button><button class="button submit" type="submit">预览提交 ↗</button></div><pre class="result" id="contact-result" aria-live="polite" hidden></pre></form></article>
+        <article class="card"><div class="card-top"><span class="number">02</span><span class="category">数量与金额</span><span class="icon" aria-hidden="true">±</span></div><h3>看得清，精度也留得住</h3><p class="description">千位分组、两位小数与负数输入。超出精度时提示，保留原来的值。</p><form id="pricing-form" novalidate><label for="amount">调整金额 <span>小数点 .</span></label><input id="amount" type="text" inputmode="decimal" autocomplete="off" value="1234.50" aria-describedby="amount-hint amount-error"><p class="hint" id="amount-hint">使用精确字符串传递金额；本示例不执行付款。</p><div class="feedback"><span id="amount-status" class="status"></span><span id="amount-error" class="error" role="status"></span></div><div class="value-row"><span>提交值</span><output id="amount-value">—</output></div><div class="card-actions"><button class="button secondary" type="button" data-fill="amount">大数示例</button><button class="button submit" type="submit">预览提交 ↗</button></div><pre class="result" id="pricing-result" aria-live="polite" hidden></pre></form></article>
+        <article class="card"><div class="card-top"><span class="number">03</span><span class="category">预约与登记</span><span class="icon" aria-hidden="true">⌗</span></div><h3>格式之外，日期也要成立</h3><p class="description">支持公历日期和自定义业务编号。未填完与日期无效，分别给出反馈。</p><form id="booking-form" novalidate><div class="split-fields"><div><label for="date">预约日期</label><input id="date" type="text" inputmode="numeric" autocomplete="off" value="2026-10-02" placeholder="YYYY-MM-DD" aria-describedby="date-error"><div class="feedback"><span id="date-status" class="status"></span><span id="date-error" class="error" role="status"></span></div></div><div><label for="code">业务编号</label><input id="code" type="text" autocomplete="off" value="AB-0042" placeholder="AB-0042" aria-describedby="code-error"><div class="feedback"><span id="code-status" class="status"></span><span id="code-error" class="error" role="status"></span></div></div></div><p class="hint">编号为两位英文字母 + 四位数字，可附加 / 两位字母数字。</p><div class="value-row"><span>日期提交值</span><output id="date-value">—</output></div><div class="card-actions"><button class="button secondary" type="button" data-fill="invalid-date">试试无效日期</button><button class="button submit" type="submit">预览提交 ↗</button></div><pre class="result" id="booking-result" aria-live="polite" hidden></pre></form></article>
+      </div>
+    </section>
+    <section class="workbench" aria-labelledby="bench-title"><div><p class="eyebrow">YOUR RULES, SAME ENGINE</p><h2 id="bench-title">你的格式，你来定义</h2><p>修改规则后应用，再输入一段内容。支持数字、字母和可选后缀。</p><dl class="legend"><div><dt>#</dt><dd>数字</dd></div><div><dt>A</dt><dd>英文字母</dd></div><div><dt>*</dt><dd>字母或数字</dd></div><div><dt>X</dt><dd>可打印字符</dd></div></dl></div><div class="bench-controls"><label for="pattern">格式规则</label><div class="inline"><input id="pattern" type="text" value="AA-####[/**]" spellcheck="false"><button id="apply-pattern" class="button primary" type="button">应用</button></div><p id="pattern-error" class="error" role="status"></p><label for="playground">测试输入</label><input id="playground" type="text" value="" placeholder="试试 ab1234" autocomplete="off" aria-describedby="playground-error"><div class="feedback"><span id="playground-status" class="status"></span><span id="playground-error" class="error" role="status"></span></div><div class="value-row"><span>原始值</span><output id="playground-value">—</output></div></div></section>
+    <section class="install"><div><p class="eyebrow">BUILT TO BE REUSED</p><h2>接入你的 MoonBit 项目</h2><p>纯 MoonBit 编辑核心 · JavaScript / Wasm GC · MIT 开源</p></div><div class="install-command"><code>moon add YeeHh2004/mooninput</code><button id="copy-install" type="button" aria-label="复制安装命令">复制</button></div></section>
+  </main>
+  <footer><span>MoonInput <span class="version">v0.1.0</span></span><div><a href="https://github.com/YeeHh2004/mooninput/blob/main/docs/BEHAVIOR.md">行为边界</a><a href="https://github.com/YeeHh2004/mooninput/actions">自动化检查</a><a href="LICENSE.txt">MIT License</a></div></footer>
+  <script type="module">
+    import('./app.mjs').catch(error => {const box=document.querySelector('#load-error');box.hidden=false;box.textContent='示例未能加载。请刷新页面，或参考 README 在本地构建运行。';console.error(error);});
+  </script>
+</body>
+</html>
