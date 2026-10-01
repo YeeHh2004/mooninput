@@ -52,3 +52,5 @@ Linux CI installs Chromium with --with-deps. BROWSER_CHANNEL=msedge can use inst
 Publish after CI passes for the current commit. Use the [official login/publish process](https://docs.moonbitlang.com/en/stable/toolchain/moon/package-manage-tour.html). Keep credentials outside source and logs. Published versions are immutable; bump the version for later source changes.
 
 After publication run `node scripts/check-consumer.mjs --registry` and dispatch registry.yml for Linux/Windows public installation. It uses no publication secret. Pages deploys only successful current-main CI artifacts; build-info.json records source SHA, compiler, version and engine SHA-256. Release archives include tracked source and precompiled site/CLI, checksums and licenses.
+
+From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.1.0.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding still requires the pinned compiler.

@@ -66,6 +66,8 @@ moon run examples/basic --target wasm-gc
 
 ## 浏览器与 CLI
 
+无需安装 MoonBit 的体验方式：下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest) 中的 `mooninput-0.1.0.zip`，解压后在目录中执行 `node scripts/serve.mjs` 或下方 CLI 命令。预编译包仅需要 Node.js 22+，附源码、编译信息和逐文件校验和。
+
 需要 Node.js 22+ 和上述固定 MoonBit 版本。运行示例不需要 npm 运行时依赖：
 
 ```sh
