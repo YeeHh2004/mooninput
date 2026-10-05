@@ -75,7 +75,7 @@ test "bounded reconciliation rejects huge transient input before allocating diff
 ///|
 test "reconcile range mapping and failed native edit" {
   assert_eq(amount("1234").reconcile("1,234", 2, 4).unwrap().selection(), {
-    start: 1,
+    start: 2,
     end: 4,
   })
   assert_eq(

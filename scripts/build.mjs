@@ -15,5 +15,5 @@ const read = path => readFileSync(new URL('../'+path,import.meta.url),'utf8').re
 writeFileSync(new URL('THIRD-PARTY-NOTICES.txt',web), read('licenses/NOTICE')+'\n'+read('licenses/MoonBit-core-LICENSE'));
 let sourceCommit = null;
 try { sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(); } catch {}
-writeFileSync(new URL('build-info.json',web),JSON.stringify({version:'0.1.0',toolchain,sourceCommit,engineSha256:createHash('sha256').update(readFileSync(new URL('mooninput.mjs',web))).digest('hex')},null,2)+'\n');
+writeFileSync(new URL('build-info.json',web),JSON.stringify({version:'0.1.1',toolchain,sourceCommit,engineSha256:createHash('sha256').update(readFileSync(new URL('mooninput.mjs',web))).digest('hex')},null,2)+'\n');
 console.log('Built MoonBit input engine and license notices.');

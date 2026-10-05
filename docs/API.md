@@ -33,13 +33,14 @@ const binding = bindInput(element, {kind:'pattern',pattern:'AA-####[/**]'}, {
 
 - `state`: detached frozen object: raw, display, start, end, status, reason, value.
 - `setValue(string)`: programmatic update through the core; success contributes to history.
+- `reset(string?)`: use supplied text or current `element.defaultValue`; a successful reset clears undo/redo. Invalid reset data preserves the previous value and history and calls onError.
 - `undo()` / `redo()`: restore snapshot and selection; new changes clear redo.
 - `destroy()`: remove listeners and discard history. Idempotent. Destroy before rebinding.
 - `onChange` is the integration signal. Intercepted edits do not dispatch another synthetic native input event, avoiding recursion.
-- A direct assignment to element.value is not an edit event. Use setValue; for native form reset, call setValue(element.defaultValue) after reset. Applications own required-field policy and submission validation.
+- A direct assignment to element.value is not an edit event. Use setValue. Native form reset is handled after its default action; canceled reset events are respected, including controls associated using the form attribute. Destroy removes this coordination. Applications own required-field policy and submission validation.
 - Composition defers normalization until completion. No network calls or persistence occur.
 
-`createEditor(config, initial)` works without DOM. `apply(op,text,start,end)` returns {ok,state} or {ok:false,code,error,state?}. Missing end defaults to start. `restore(snapshot)` restores raw and selection. Config: kind pattern/decimal/date, pattern, precision, signed, grouped as applicable.
+`createEditor(config, initial)` works without DOM. `apply(op,text,start,end)` returns {ok,state} or {ok:false,code,error,state?}. Omitting both positions uses the current selection, so select followed by insert replaces that range. Supplying only start creates a collapsed caret. `restore(snapshot)` restores raw and selection. Config: kind pattern/decimal/date, pattern, precision, signed, grouped as applicable.
 
 ## JSON boundary
 

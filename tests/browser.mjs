@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {startServer} from '../scripts/serve.mjs';
-const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const engines=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const engine=process.env.BROWSER_ENGINE||'chromium';
+if(!['chromium','firefox','webkit'].includes(engine))throw new Error('Unsupported BROWSER_ENGINE');
 const server=await startServer();
 let browser;
 const checks=[];
 function check(name,actual,expected){assert.deepEqual(actual,expected,name);checks.push(name);}
 try{
-  browser=await chromium.launch({headless:true,...(process.env.BROWSER_CHANNEL?{channel:process.env.BROWSER_CHANNEL}:{})});
+  browser=await engines[engine].launch({headless:true,...(process.env.BROWSER_CHANNEL?{channel:process.env.BROWSER_CHANNEL}:{})});
   const page=await browser.newPage({viewport:{width:1440,height:1100}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}`);
@@ -50,6 +52,10 @@ try{
   check('calendar repair aria state',await date.getAttribute('aria-invalid'),'false');
   await page.locator('#booking-form button[type=submit]').click();
   check('booking values',JSON.parse(await page.locator('#booking-result').textContent()),{date:'2024-02-29',code:'AB0042'});
+  await page.locator('#booking-form button[type=reset]').click();
+  check('demo reset restores date and hides previous submission',{
+    date:await date.inputValue(),hidden:await page.locator('#booking-result').evaluate(el=>el.hidden)
+  },{date:'2026-10-02',hidden:true});
   await page.locator('#pattern').fill('XXX');await page.locator('#apply-pattern').click();
   const play=page.locator('#playground');
   await play.evaluate(el=>{el.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));el.value='你😀';el.setSelectionRange(3,3);el.dispatchEvent(new InputEvent('input',{bubbles:true,isComposing:true,data:'你😀'}));});
@@ -69,12 +75,36 @@ try{
     b.destroy();b.destroy();el.readOnly=false;const event=new InputEvent('beforeinput',{cancelable:true,bubbles:true,inputType:'insertText',data:'2'});el.dispatchEvent(event);el.remove();return {readOnly,prevented:event.defaultPrevented};
   });
   check('readonly and destroy lifecycle',lifecycle,{readOnly:'',prevented:false});
+  const resetCases=await page.evaluate(async()=>{
+    const {bindInput}=await import('./adapter.mjs');
+    const form=document.createElement('form');form.id='reset-fixture';document.body.append(form);
+    const el=document.createElement('input');el.setAttribute('form',form.id);el.defaultValue='1234';document.body.append(el);
+    const failures=[];const binding=bindInput(el,{kind:'decimal'},{onError:e=>failures.push(e.code)});
+    let duplicate=false;try{bindInput(el,{kind:'decimal'});}catch{duplicate=true;}
+    binding.setValue('99');form.reset();await Promise.resolve();
+    const native={display:el.value,raw:binding.state.raw,undo:binding.undo(),redo:binding.redo()};
+    binding.setValue('88');form.addEventListener('reset',e=>e.preventDefault(),{once:true});form.reset();await Promise.resolve();
+    const canceled={display:el.value,raw:binding.state.raw};
+    el.defaultValue='bad';form.reset();await Promise.resolve();
+    const invalid={display:el.value,raw:binding.state.raw,errors:[...failures],undo:binding.undo(),restored:binding.state.raw};
+    el.defaultValue='42';binding.setValue('77');binding.reset();
+    const explicit={raw:binding.state.raw,undo:binding.undo()};
+    form.reset();binding.destroy();el.value='detached';await Promise.resolve();
+    const destroyed=el.value;el.value='';const rebound=bindInput(el,{kind:'decimal'});rebound.destroy();
+    form.remove();el.remove();return {duplicate,native,canceled,invalid,explicit,destroyed};
+  });
+  check('duplicate bindings are rejected',resetCases.duplicate,true);
+  check('native reset normalizes external form control and clears history',resetCases.native,{display:'1,234',raw:'1234',undo:false,redo:false});
+  check('canceled form reset preserves edit',resetCases.canceled,{display:'88',raw:'88'});
+  check('invalid reset restores state and retains undo',resetCases.invalid,{display:'88',raw:'88',errors:['character'],undo:true,restored:'1234'});
+  check('explicit reset follows current default and clears history',resetCases.explicit,{raw:'42',undo:false});
+  check('destroy cancels queued reset and allows rebinding',resetCases.destroyed,'detached');
   await mkdir(new URL('../dist/browser-screenshots/',import.meta.url),{recursive:true});
-  await page.screenshot({path:new URL('../dist/browser-screenshots/desktop.png',import.meta.url).pathname.replace(/^\/(\w:)/,'$1'),fullPage:true});
+  await page.screenshot({path:new URL(`../dist/browser-screenshots/${engine}-desktop.png`,import.meta.url).pathname.replace(/^\/(\w:)/,'$1'),fullPage:true});
   await page.setViewportSize({width:390,height:844});
   check('mobile has no horizontal overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  await page.screenshot({path:new URL('../dist/browser-screenshots/mobile.png',import.meta.url).pathname.replace(/^\/(\w:)/,'$1'),fullPage:true});
+  await page.screenshot({path:new URL(`../dist/browser-screenshots/${engine}-mobile.png`,import.meta.url).pathname.replace(/^\/(\w:)/,'$1'),fullPage:true});
   check('no browser exceptions',errors,[]);
-  await writeFile(new URL('../dist/browser-results.json',import.meta.url),JSON.stringify({checks:checks.length,passed:checks},null,2));
-  console.log(`Browser checks passed: ${checks.length}`);
+  await writeFile(new URL(`../dist/browser-${engine}-results.json`,import.meta.url),JSON.stringify({engine,checks:checks.length,passed:checks},null,2));
+  console.log(`${engine} browser checks passed: ${checks.length}`);
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}

@@ -4,16 +4,16 @@ Current execution evidence: [Actions](https://github.com/YeeHh2004/mooninput/act
 
 | Layer | Verification |
 | --- | --- |
-| MoonBit | 37 tests: masks, decimals, dates, UTF-16, errors, native reconciliation, limits and protocol; JS and Wasm GC |
+| MoonBit | 39 tests: masks, decimals, dates, UTF-16, errors, native reconciliation, limits and protocol; JS and Wasm GC |
 | Consumer | Separate module imports public API; registry mode downloads release and compares core sources |
 | Generated edits | 12 seeds × 1,000 operations versus an independent digit-array model |
 | Exact text | 1,000 seeded long decimals roundtrip without numeric conversion |
 | Calendar | 4,800 date samples versus a separate Gregorian reference |
 | CLI | Exit codes, exact values, bad arguments and selection-aware replay |
-| Browser | 29 checks: typing, paste, select/replace, history, fallback, dates, composition lifecycle, responsive layout and exceptions |
+| Browser | 36 checks per engine (Chromium, Firefox, WebKit): typing, paste, select/replace, history, fallback, dates, composition, native/canceled/invalid reset, binding teardown, responsive layout and exceptions |
 | Reproduction | Example stdout matches on both targets; actual package ZIP is audited |
 
-Composition tests use programmatic events, not all physical IMEs. A 390px screenshot verifies layout, not mobile keyboard compatibility. Random-model testing covers homogeneous digit masks; heterogeneous masks have explicit behavior/error tests.
+Composition tests use programmatic events, not all physical IMEs. A 390px screenshot verifies layout, not mobile keyboard compatibility. WebKit CI is not a claim of testing actual iOS devices. Random-model testing covers homogeneous digit masks; heterogeneous masks have explicit behavior/error tests. Each engine writes its own results and screenshots; current run results are in Actions, rather than inferred from a test count.
 
 Coverage measures compiler instrumentation points, not complete semantic coverage:
 

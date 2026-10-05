@@ -35,3 +35,19 @@ test('snapshots are isolated and restorations preserve caret',()=>{
   assert.equal(editor.state.raw,'12');
   assert.equal(editor.state.start,2);
 });
+
+test('implicit edits preserve the selected range; explicit start collapses it',()=>{
+  const editor=createEditor({kind:'pattern',pattern:'####'},'1234');
+  editor.apply('select','',1,3);
+  assert.equal(editor.apply('insert','9').state.raw,'194');
+  editor.apply('select','',0,2);
+  assert.equal(editor.apply('insert','8',3).state.raw,'1948');
+  editor.apply('select','',1,3);
+  assert.equal(editor.apply('backspace').state.raw,'18');
+});
+
+test('unchanged ambiguous display survives composition reconciliation',()=>{
+  const editor=createEditor({kind:'pattern',pattern:'1####'},'23');
+  for(let i=0;i<10;i++)assert.equal(editor.apply('reconcile','123',2,2).state.raw,'23');
+  assert.equal(editor.state.start,2);
+});

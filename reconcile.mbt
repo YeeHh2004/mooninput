@@ -18,6 +18,11 @@ pub fn Editor::reconcile(
   if start < 0 || end < start || end > text.length() {
     return Err(InvalidSelection)
   }
+  // An unchanged display already has a known raw interpretation. Re-parsing it
+  // can turn literal characters into content for otherwise ambiguous masks.
+  if text == self.display() {
+    return self.select(start, end)
+  }
   let next = match self.set_value(text) {
     Ok(e) => e
     Err(_) => {

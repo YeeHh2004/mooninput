@@ -7,6 +7,8 @@
 
 [在线体验](https://yeehh2004.github.io/mooninput/) · [Mooncakes / API](https://mooncakes.io/docs/YeeHh2004/mooninput) · [接入文档](docs/API.md) · [行为边界](docs/BEHAVIOR.md) · [查重依据](docs/SELECTION.md)
 
+首次评估可从 [三分钟体验与验收导航](docs/REVIEW.md) 开始：三个实际场景、与已有库的职责差异，以及每项验收要求对应的源码和检查入口。
+
 ## 解决什么问题
 
 在中间插入、删除、粘贴、选择替换，以及输入法组合输入结束后，仍保持正确的值和光标。
@@ -22,7 +24,7 @@
 可复现基线：MoonBit compiler/core **`0.10.14+7d59c7ec9`**；核心支持 **JS、Wasm GC**。用 `moon version --all` 核对；安装与固定版本配置见 [开发说明](docs/DEVELOPMENT.md)。
 
 ```sh
-moon add YeeHh2004/mooninput@0.1.0
+moon add YeeHh2004/mooninput@0.1.1
 ```
 
 在 `moon.pkg` 中加入：
@@ -66,7 +68,7 @@ moon run examples/basic --target wasm-gc
 
 ## 浏览器与 CLI
 
-无需安装 MoonBit 的体验方式：下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest) 中的 `mooninput-0.1.0.zip`，解压后在目录中执行 `node scripts/serve.mjs` 或下方 CLI 命令。预编译包仅需要 Node.js 22+，附源码、编译信息和逐文件校验和。
+无需安装 MoonBit 的体验方式：下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest) 中的 `mooninput-0.1.1.zip`，解压后在目录中执行 `node scripts/serve.mjs` 或下方 CLI 命令。预编译包仅需要 Node.js 22+，附源码、编译信息和逐文件校验和。
 
 需要 Node.js 22+ 和上述固定 MoonBit 版本。运行示例不需要 npm 运行时依赖：
 
@@ -87,6 +89,7 @@ const binding = bindInput(document.querySelector('#amount'),
     onError(error) { console.log(error.message); }
   });
 // binding.setValue('1234.50'); binding.undo(); binding.redo();
+// binding.reset(); // 恢复当前 defaultValue 并清空历史；原生表单重置也会同步。
 // 卸载时调用 binding.destroy()。
 ```
 
@@ -118,7 +121,7 @@ node scripts/check-examples.mjs
 python scripts/check-mooncake.py
 ```
 
-Linux/Windows CI 覆盖检查、构建、测试。包含 37 项 MoonBit 测试、独立消费者、12,000 次随机编辑模型对照、1,000 组精确小数往返、4,800 个日期样本和浏览器检查。当前结果见 [Actions](https://github.com/YeeHh2004/mooninput/actions)。
+Linux/Windows CI 覆盖检查、构建、测试。包含 39 项 MoonBit 测试、独立消费者、12,000 次随机编辑模型对照、1,000 组精确小数往返、4,800 个日期样本和浏览器检查。当前结果见 [Actions](https://github.com/YeeHh2004/mooninput/actions)。
 
 浏览器测试额外需要 `npm install`、`npx playwright install chromium`，再运行 `node tests/browser.mjs`。组合输入采用合成事件测试，不代表所有实体手机/输入法均已验证，见 [验证说明](docs/VERIFICATION.md)。
 

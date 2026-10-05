@@ -27,6 +27,7 @@ for(const button of document.querySelectorAll('[data-fill]'))button.addEventList
   if(key==='invalid-date')bindings.get('date').setValue('20230229');
 });
 for(const [form,ids,resultId] of [['contact-form',['phone'],'contact-result'],['pricing-form',['amount'],'pricing-result'],['booking-form',['date','code'],'booking-result']]){
+  $(form).addEventListener('reset',event=>queueMicrotask(()=>{if(!event.defaultPrevented)$(resultId).hidden=true;}));
   $(form).addEventListener('submit',event=>{
     event.preventDefault();const result=$(resultId);result.hidden=false;
     const invalid=ids.find(id=>bindings.get(id).state.status!=='complete');

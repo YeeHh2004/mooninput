@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib, json, subprocess, zipfile
 root = Path(__file__).resolve().parent.parent
 subprocess.run(['moon', 'package'], cwd=root, check=True)
-archive = root / '_build/publish/YeeHh2004-mooninput-0.1.0.zip'
+archive = root / '_build/publish/YeeHh2004-mooninput-0.1.1.zip'
 with zipfile.ZipFile(archive) as z:
     assert z.testzip() is None
     names = set(z.namelist())

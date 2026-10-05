@@ -46,12 +46,15 @@ jobs:
       - name: Install browser test runner
         if: matrix.os == 'ubuntu-latest'
         run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
-      - name: Install Chromium
+      - name: Install browser engines
         if: matrix.os == 'ubuntu-latest'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
       - name: Browser acceptance
         if: matrix.os == 'ubuntu-latest'
-        run: node tests/browser.mjs
+        run: |
+          node tests/browser.mjs
+          BROWSER_ENGINE=firefox node tests/browser.mjs
+          BROWSER_ENGINE=webkit node tests/browser.mjs
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
         with:
@@ -63,5 +66,5 @@ jobs:
           name: verification-evidence
           path: |
             _build/core-coverage.xml
-            dist/browser-results.json
+            dist/browser-*-results.json
             dist/browser-screenshots/

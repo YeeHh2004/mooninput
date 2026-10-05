@@ -28,11 +28,11 @@ The consumer uses a temporary moon.work locally; --registry resolves the publish
 
 ```sh
 npm install
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 node tests/browser.mjs
 ```
 
-Linux CI installs Chromium with --with-deps. BROWSER_CHANNEL=msedge can use installed Edge; PLAYWRIGHT_MODULE can point to an already-installed ESM entry. Screenshots and assertion results go in ignored dist/ and CI artifacts.
+Linux CI installs all three engines with --with-deps. Set BROWSER_ENGINE=firefox or webkit to select another engine (default chromium). BROWSER_CHANNEL=msedge can use installed Edge with chromium; PLAYWRIGHT_MODULE can point to an already-installed ESM entry. Screenshots and assertion results include the engine name and go in ignored dist/ and CI artifacts.
 
 `node scripts/serve.mjs` binds 127.0.0.1:4173 (override PORT). Use HTTP, not file://. No backend is needed.
 
@@ -53,4 +53,4 @@ Publish after CI passes for the current commit. Use the [official login/publish 
 
 After publication run `node scripts/check-consumer.mjs --registry` and dispatch registry.yml for Linux/Windows public installation. It uses no publication secret. Pages deploys only successful current-main CI artifacts; build-info.json records source SHA, compiler, version and engine SHA-256. Release archives include tracked source and precompiled site/CLI, checksums and licenses.
 
-From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.1.0.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding still requires the pinned compiler.
+From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.1.1.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding still requires the pinned compiler.

@@ -13,8 +13,10 @@ export function createEditor(config, initial = '') {
   state=first.state;
   return {
     get state(){return Object.freeze({...state});},
-    apply(op,text='',start=state.start,end=start){
-      const result=request(op,text,start,end);
+    apply(op,text='',start,end){
+      const from=start??state.start;
+      const to=end??(start==null?state.end:from);
+      const result=request(op,text,from,to);
       if (result.state) state=result.state;
       return structuredClone(result);
     },
@@ -69,7 +71,22 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
     if(!future.length)return false;
     past.push(editor.state); editor.restore(future.pop()); render(); return true;
   }
-  function listen(name,fn){element.addEventListener(name,fn);listeners.push([name,fn]);}
+  function reset(value=element.defaultValue){
+    if(disposed)throw new Error('binding has been destroyed');
+    composing=false;
+    const result=editor.apply('set',value,0,0);
+    if(result.ok){past=[];future=[];}
+    render();
+    if(!result.ok)onError({code:result.code,message:result.error});
+    return result;
+  }
+  function listen(name,fn,target=element,capture=false){target.addEventListener(name,fn,capture);listeners.push([target,name,fn,capture]);}
+  // Reset is cancelable and fires before the browser restores default values.
+  // Document capture also covers controls associated through the form attribute.
+  listen('reset',event=>{
+    if(event.target!==element.form)return;
+    queueMicrotask(()=>{if(!disposed&&!event.defaultPrevented)reset();});
+  },element.ownerDocument,true);
   listen('beforeinput',event=>{
     if(!editable()||composing||event.isComposing||!event.cancelable)return;
     const type=event.inputType;
@@ -113,7 +130,7 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
   return {
     get state(){return editor.state;},
     setValue(value){return transition('set',value,{start:0,end:0});},
-    undo,redo,
-    destroy(){if(disposed)return; disposed=true;attached.delete(element);for(const [name,fn]of listeners)element.removeEventListener(name,fn);past=[];future=[];}
+    reset,undo,redo,
+    destroy(){if(disposed)return; disposed=true;attached.delete(element);for(const [target,name,fn,capture]of listeners)target.removeEventListener(name,fn,capture);past=[];future=[];}
   };
 }
