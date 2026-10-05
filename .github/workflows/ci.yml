@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             node: '22'
           - os: windows-latest
             node: '22'
@@ -39,29 +39,29 @@ jobs:
       - run: python scripts/check-mooncake.py
       - run: node scripts/check-examples.mjs
       - name: Measure core coverage
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           moon coverage analyze -- -f summary -p YeeHh2004/mooninput
           moon coverage report -f cobertura -p YeeHh2004/mooninput -o _build/core-coverage.xml
       - name: Install browser test runner
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
       - name: Install browser engines
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: npx playwright install --with-deps chromium firefox webkit
       - name: Browser acceptance
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           node tests/browser.mjs
           BROWSER_ENGINE=firefox node tests/browser.mjs
           BROWSER_ENGINE=webkit node tests/browser.mjs
       - uses: actions/upload-artifact@v4
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         with:
           name: mooninput-web
           path: web/
       - uses: actions/upload-artifact@v4
-        if: always() && matrix.os == 'ubuntu-latest'
+        if: always() && matrix.os == 'ubuntu-24.04'
         with:
           name: verification-evidence
           path: |
