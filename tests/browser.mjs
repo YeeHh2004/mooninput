@@ -25,7 +25,14 @@ try{
   check('redo intercepted insertion',await phone.inputValue(),'138 9999 8000');
   await phone.evaluate(el=>el.setSelectionRange(4,4));await phone.press('Backspace');
   check('backspace skips separator',await phone.inputValue(),'139 9998 000');
-  await phone.evaluate(el=>{el.setSelectionRange(0,el.value.length);const data=new DataTransfer();data.setData('text/plain','138 0013 8000');el.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}));});
+  await phone.evaluate(el=>{
+    el.setSelectionRange(0,el.value.length);
+    // Firefox does not preserve constructor-supplied ClipboardEvent data.
+    // Supply the same synthetic clipboard payload to the handler on all engines.
+    const event=new Event('paste',{bubbles:true,cancelable:true});
+    Object.defineProperty(event,'clipboardData',{value:{getData:type=>type==='text/plain'?'138 0013 8000':''}});
+    el.dispatchEvent(event);
+  });
   check('formatted clipboard paste',await phone.inputValue(),'138 0013 8000');
   await phone.pressSequentially('1');
   check('overflow preserves data',await phone.inputValue(),'138 0013 8000');
