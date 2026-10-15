@@ -4,16 +4,18 @@ Current execution evidence: [Actions](https://github.com/YeeHh2004/mooninput/act
 
 | Layer | Verification |
 | --- | --- |
-| MoonBit | 39 tests: masks, decimals, dates, UTF-16, errors, native reconciliation, limits and protocol; JS and Wasm GC |
-| Consumer | Separate module imports public API; registry mode downloads release and compares core sources |
+| MoonBit | 90 tests across legacy masks and extensible families: dynamic dispatch, named composition, optional/repeat, regex, callbacks, locale numbers/dates, presentation, UTF-16, errors and resource limits; JS and Wasm GC |
+| Consumer | Separate module imports old and new public APIs; registry mode downloads the version and compares root/protocol source files before testing both backends |
 | Generated edits | 12 seeds × 1,000 operations versus an independent digit-array model |
 | Exact text | 1,000 seeded long decimals roundtrip without numeric conversion |
 | Calendar | 4,800 date samples versus a separate Gregorian reference |
+| Regular languages | 3,906 finite-language candidates versus an independent word oracle; finite regex/composite models and bounded nested repetition |
+| Bounded numbers | 1,000 range values and 401 signed integer-cent inputs versus independent arithmetic references |
 | CLI | Exit codes, exact values, bad arguments and selection-aware replay |
-| Browser | 36 checks per engine (Chromium, Firefox, WebKit): typing, paste, select/replace, history, fallback, dates, composition, native/canceled/invalid reset, binding teardown, responsive layout and exceptions |
+| Browser | 36 existing checks plus 39 advanced checks per engine (Chromium, Firefox, WebKit): dynamic selection, regex prefixes, field composition, custom tokens, numeric/date options, workbench presets, errors, history, option updates/events and responsive layout |
 | Reproduction | Example stdout matches on both targets; actual package ZIP is audited |
 
-Clipboard payloads and composition tests use programmatic events; they do not exercise OS clipboard permissions or all physical IMEs. A 390px screenshot verifies layout, not mobile keyboard compatibility. WebKit CI is not a claim of testing actual iOS devices. Random-model testing covers homogeneous digit masks; heterogeneous masks have explicit behavior/error tests. Each engine writes its own results and screenshots; current run results are in Actions, rather than inferred from a test count.
+Clipboard payloads and composition tests use programmatic events; they do not exercise OS clipboard permissions or all physical IMEs. A 390px screenshot verifies layout, not mobile keyboard compatibility. WebKit CI is not a claim of testing actual iOS devices. The 12,000-edit random model covers homogeneous digit masks; composition, dynamic and heterogeneous paths have separate finite-language, exhaustive and regression checks. Each engine writes its own existing/advanced results and screenshots; current run results are in Actions, rather than inferred from a test count.
 
 Coverage measures compiler instrumentation points, not complete semantic coverage:
 

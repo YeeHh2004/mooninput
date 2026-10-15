@@ -5,17 +5,20 @@ import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 const root=fileURLToPath(new URL('../',import.meta.url)).replaceAll('\\','/');
+const version=JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
 const workspace=mkdtempSync(join(tmpdir(),'mooninput-consumer-')),consumer=join(workspace,'consumer');
 const registry=process.argv.includes('--registry');
 try{
   cpSync(new URL('../examples/consumer/',import.meta.url),consumer,{recursive:true,filter:source=>!/[\\/](_build|\.mooncakes)([\\/]|$)/.test(source)});
   const run=args=>execFileSync('moon',args,{cwd:consumer,encoding:'utf8',stdio:['ignore','pipe','inherit']});
   if(registry){
-    writeFileSync(join(consumer,'moon.mod'),'name = "mooninput-examples/consumer"\n\nversion = "0.1.1"\n');
-    run(['add','YeeHh2004/mooninput@0.1.1']);
+    writeFileSync(join(consumer,'moon.mod'),`name = "mooninput-examples/consumer"\n\nversion = "${version}"\n`);
+    run(['add',`YeeHh2004/mooninput@${version}`]);
     run(['build','--target','js']);
     const downloaded=join(consumer,'.mooncakes','YeeHh2004','mooninput');
-    for(const name of readdirSync(root).filter(n=>n.endsWith('.mbt')||n.endsWith('.mbti'))){
+    const sourceFiles=readdirSync(root).filter(n=>n.endsWith('.mbt')||n.endsWith('.mbti'));
+    for(const file of readdirSync(join(root,'protocol')).filter(n=>n.endsWith('.mbt')||n.endsWith('.mbti')))sourceFiles.push('protocol/'+file);
+    for(const name of sourceFiles){
       const norm=text=>text.replaceAll('\r\n','\n');
       assert.equal(norm(readFileSync(join(downloaded,name),'utf8')),norm(readFileSync(join(root,name),'utf8')),`Published source: ${name}`);
     }

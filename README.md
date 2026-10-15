@@ -3,31 +3,30 @@
 [![CI](https://github.com/YeeHh2004/mooninput/actions/workflows/ci.yml/badge.svg)](https://github.com/YeeHh2004/mooninput/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-176b50)](LICENSE)
 
-**MoonBit 原生的结构化输入编辑库。** 处理手机号、日期、小数和业务编号输入中的格式、选区、光标与中间状态，同时输出显示文本和可提交的原始值。
+**MoonBit 原生、可组合的结构化输入编辑库。** 用动态掩码、正则、自定义校验、命名区块和重复规则构建输入约束，统一处理显示值、原始值、完整值、选区与光标。
 
-[在线体验](https://yeehh2004.github.io/mooninput/) · [Mooncakes / API](https://mooncakes.io/docs/YeeHh2004/mooninput) · [接入文档](docs/API.md) · [行为边界](docs/BEHAVIOR.md) · [查重依据](docs/SELECTION.md)
+[在线体验](https://yeehh2004.github.io/mooninput/) · [Mooncakes / API](https://mooncakes.io/docs/YeeHh2004/mooninput) · [0.2 升级说明](docs/UPGRADE-0.2.md) · [IMask 功能范围对照](docs/IMASK-COVERAGE.md) · [接入文档](docs/API.md) · [验收导航](docs/REVIEW.md)
 
-首次评估可从 [三分钟体验与验收导航](docs/REVIEW.md) 开始：三个实际场景、与已有库的职责差异，以及每项验收要求对应的源码和检查入口。
+0.2 将原有的固定格式扩展为可复用规则模型：一个字段可随内容切换规则，业务可提供自己的字符定义与校验器，已有规则可以嵌套组合。参考 IMask 的通用功能范围，以 MoonBit 实现；配置语法与 API 有明确差异，完整能力及限制见[对照表](docs/IMASK-COVERAGE.md)。
 
-## 解决什么问题
+## 可以解决什么问题
 
-在中间插入、删除、粘贴、选择替换，以及输入法组合输入结束后，仍保持正确的值和光标。
+- **多规格标识与批量录入：** 动态选择短码／长码，以自定义字符定义、命名区块和有限重复表达业务格式。
+- **参数、报价与测量值：** 组合枚举、整数范围和精确小数，配置小数点、分组、上下界，并读取各区块的完整值。
+- **账户、表单与配置界面：** 用正则可行前缀及业务回调处理输入中的未完成／无效状态，支持选中替换、粘贴、中间修改和错误修复。
+- **预约、登记与数据导入：** 配置日期顺序与范围；同一套规则既可绑定浏览器输入，也可在 MoonBit 或 CLI 中无界面格式转换。
 
-- 联系信息：粘贴或编辑分组手机号，提交纯数字字符串。
-- 数量与金额：编辑带分组的精确十进制文本，显式拒绝超出配置的小数位，保留 `-`、`.` 等未完成状态。
-- 预约与登记：输入公历日期与自定义业务编号，区分未完成、完整有效、完整无效。
+规则编译、动态选择、校验、组合解析、数字／日期处理、编辑转换与 JSON 协议均使用 MoonBit。JavaScript 负责 DOM 事件、字段历史和 Node 文件 IO；没有外部服务、密钥或 JavaScript 规则引擎依赖。
 
-规则编译、日期检查、编辑转换、UTF-16 映射和 JSON 协议都使用 MoonBit。网页和 Node CLI 是事件/IO 适配层，没有外部服务或 API 密钥依赖。表单状态库可消费本库输出的值；与已有库的比较见 [SELECTION](docs/SELECTION.md)，不宣称生态绝对空白。
+## 安装
 
-## 安装与最小示例
-
-可复现基线：MoonBit compiler/core **`0.10.14+7d59c7ec9`**；核心支持 **JS、Wasm GC**。用 `moon version --all` 核对；安装与固定版本配置见 [开发说明](docs/DEVELOPMENT.md)。
+可复现基线：MoonBit compiler/core **`0.10.14+7d59c7ec9`**，支持 **JS、Wasm GC**。使用 `moon version --all` 核对版本，固定工具链步骤见[开发说明](docs/DEVELOPMENT.md)。
 
 ```sh
-moon add YeeHh2004/mooninput@0.1.1
+moon add YeeHh2004/mooninput@0.2.0
 ```
 
-在 `moon.pkg` 中加入：
+在 `moon.pkg` 中导入：
 
 ```moonbit
 import {
@@ -35,42 +34,85 @@ import {
 }
 ```
 
+## 从规则组合开始
+
 ```moonbit
-let mask = @input.pattern("### #### ####").unwrap()
-let editor = @input.Editor::new(mask).unwrap()
-let filled = editor.insert("13800138000").unwrap()
-println(filled.display()) // 138 0013 8000
-println(filled.value().unwrap()) // 13800138000
-let edited = filled.select(4, 8).unwrap().insert("9999").unwrap()
-println(edited.display()) // 138 9999 8000
-println(filled.display()) // 原快照仍为 138 0013 8000
+fn main {
+  // 输入长度变化时，动态候选会重新选择。
+  let identifiers = @input.dynamic([
+    ("short", @input.pattern("##-##").unwrap()),
+    ("long", @input.pattern("###-###").unwrap()),
+  ]).unwrap()
+  let short = @input.Editor::new(identifiers, initial="1234").unwrap()
+  let longer = short.insert("5").unwrap()
+  println(short.display()) // 12-34，旧快照保持可用
+  println(longer.display()) // 123-45
+  println(longer.active_mask().unwrap()) // long
+
+  // 范围、字面量和命名区块组合成一个可编辑规则。
+  let time = @input.composite([
+    @input.Block("hour", @input.range(0, 23, width=2).unwrap()),
+    @input.Literal(":"),
+    @input.Block("minute", @input.range(0, 59, width=2).unwrap()),
+  ]).unwrap()
+  let value = @input.Editor::new(time, initial="2359").unwrap()
+  println(value.display()) // 23:59
+  // value.fields() 返回 hour=23、minute=59。
+
+  // 使用者的 MoonBit 回调增加语义校验，无需增加硬编码掩码类型。
+  let checksum = @input.with_validation(
+    @input.pattern("####").unwrap(),
+    raw => {
+      if raw.length() < 4 { return @input.Incomplete }
+      let mut sum = 0
+      for c in raw { sum += c.to_int() - 48 }
+      if sum % 10 == 0 {
+        @input.Complete
+      } else {
+        @input.Invalid("checksum must be divisible by ten")
+      }
+    },
+  )
+  println(@input.pipe(checksum, "1216", unmask=true).unwrap()) // 1216
+}
 ```
 
-示例里的 `unwrap` 用于已知合法数据；实际接入应处理 `Result`。完整可运行例子在 [examples/basic](examples/basic)，独立模块在 [examples/consumer](examples/consumer)。
+示例的 `unwrap` 面向已知合法配置；实际应用应处理 `Result`。语法错误会拒绝整次编辑，语义无效值可以保留并继续修改，`value()` 仅返回完整有效值。所有位置使用 UTF-16 偏移，覆盖 JS 和 Wasm GC；字符规则按 Unicode 标量工作，不声称完整字素簇导航。
+
+可运行样例 [examples/rules](examples/rules) 展示动态、组合、自定义定义、正则、重复、小数、日期、函数校验与显示配置；[examples/basic](examples/basic) 保留基础输入编辑示例。
 
 ```sh
+moon run examples/rules --target js
+moon run examples/rules --target wasm-gc
 moon run examples/basic --target wasm-gc
 ```
 
 ## 核心能力
 
-| 入口 | 行为 |
+| 入口 | 复用方式 |
 | --- | --- |
-| `pattern("AA-####[/**]")` | 数字、字母、可打印字符、分隔符、单个可选后缀 |
-| `decimal(precision=2, signed=true)` | 精确小数字符串、千位分组、符号与中间状态 |
-| `iso_date()` | `YYYY-MM-DD` 格式与 0001–9999 年公历检查 |
-| `Editor::select / insert` | 选区替换、插入、格式化粘贴 |
-| `Editor::backspace / delete_forward` | 删除选区或相邻可编辑字符 |
-| `Editor::display / raw / value / status` | 显示值、原始值、完整值与状态 |
-| `Editor::reconcile` | 组合输入/自动填充后的归一化与光标恢复 |
+| `dynamic`、`active_mask` | 自动或回调分派多个候选，编辑后重新计算当前规则 |
+| `composite`、`Block / Literal / Optional`、`fields` | 命名、嵌套和可选区块；返回区块的完整值 |
+| `repeat(mask, min, max)` | 有限重复，保留最后一个区块的未完成状态 |
+| `pattern`、`definition` | 内置字符槽位、自定义接受／归一化函数、固定分隔符和可选后缀 |
+| `custom`、`with_validation / with_prepare / with_value` | 自定义状态、语义校验、输入预处理与完整值后处理 |
+| `regex(source, max_length=...)` | MoonBit NFA 正则子集及可行前缀检查；有界规则可参与组合 |
+| `range`、`enumeration` | 固定宽度整数范围与 autofix、有限枚举与大小写策略 |
+| `number`、`date` | 精确十进制字符串、地区格式与上下界；可配置公历日期顺序与边界 |
+| `presentation` | 显示占位符、隐藏可编辑字符；直接 Pattern／`iso_date` 支持 eager 字面量 |
+| `Editor`、`pipe` | 不可变编辑、选区替换、删除、覆盖／跳过策略、重新归一化和无界面转换 |
 
-`#` 为 ASCII 数字，`A` 为英文字母，`*` 为字母数字，`X` 为可打印 Unicode 标量；字母自动转大写。反斜杠转义规则字符，`[ ]` 仅支持一个末尾可选段。位置统一使用 UTF-16 偏移。详细限制及歧义处理见 [BEHAVIOR](docs/BEHAVIOR.md)。
+旧入口 `decimal`、`iso_date` 保留。Pattern 中 `#` 为 ASCII 数字，`A` 为英文字母，`*` 为字母数字，`X` 为可打印 Unicode 标量；默认 `A/*` 转大写。多个／嵌套可选区块通过组合 API 表达。
 
-## 浏览器与 CLI
+`display()` 是显示文本，`raw()` 是可编辑内容，`value()` 是完整提交字符串；组合值可以包含字面量，数字采用标准点号十进制，配置日期输出 ISO 日期。应按用途读取 `fields()`，不能假设这几种值相同。详细合同、资源限制和未实现项见 [API](docs/API.md)、[行为边界](docs/BEHAVIOR.md) 与 [IMask 范围对照](docs/IMASK-COVERAGE.md)。
 
-无需安装 MoonBit 的体验方式：下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest) 中的 `mooninput-0.1.1.zip`，解压后在目录中执行 `node scripts/serve.mjs` 或下方 CLI 命令。预编译包仅需要 Node.js 22+，附源码、编译信息和逐文件校验和。
+## 浏览器体验与接入
 
-需要 Node.js 22+ 和上述固定 MoonBit 版本。运行示例不需要 npm 运行时依赖：
+[在线演示](https://yeehh2004.github.io/mooninput/) 包括 **6 个扩展规则场景、10 种可修改 JSON 预设**，以及原有 3 个业务演示和 Pattern 工作台。可以直接编辑动态标识、用户名、组合时间、十六进制、地区小数和自定义日期，查看当前分支、区块值及完整引擎状态。JSON 工作台允许嵌套规则；错误配置保留当前输入。
+
+无需安装 MoonBit 的体验方式：下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest) 的对应版本预编译包，解压后使用 **Node.js 22+** 运行 `node scripts/serve.mjs`。包内附源码、许可证、编译信息和校验和。
+
+从源码构建需要 Node.js 22+ 和上述固定 MoonBit 版本，运行时无需 npm 依赖：
 
 ```sh
 git clone https://github.com/YeeHh2004/mooninput.git
@@ -79,32 +121,55 @@ node scripts/build.mjs
 node scripts/serve.mjs
 ```
 
-打开 **http://127.0.0.1:4173**。三个业务场景和自定义规则工作台使用同一份 MoonBit 编译产物。
+打开 **http://127.0.0.1:4173**。接入自己的页面时复制 `web/adapter.mjs`、构建出的 `web/mooninput.mjs`，并保留许可证与 notices：
 
 ```js
 import {bindInput} from './adapter.mjs';
-const binding = bindInput(document.querySelector('#amount'),
-  {kind:'decimal', precision:2}, {
-    onChange(state) { console.log(state.value, state.status); },
-    onError(error) { console.log(error.message); }
-  });
-// binding.setValue('1234.50'); binding.undo(); binding.redo();
-// binding.reset(); // 恢复当前 defaultValue 并清空历史；原生表单重置也会同步。
+const binding = bindInput(document.querySelector('#identifier'), {
+  kind:'dynamic',
+  masks:[
+    {name:'short',kind:'pattern',pattern:'##-##'},
+    {name:'long',kind:'pattern',pattern:'###-###'}
+  ]
+}, {
+  onChange(state) { console.log(state.display,state.status,state.active); },
+  onAccept(state) { console.log('value changed',state.value); },
+  onComplete(state) { console.log('complete',state.value); },
+  onError(error) { console.log(error.message); }
+});
+// binding.setValue('123456'); binding.undo(); binding.redo();
+// binding.updateOptions({masks:[/* 完整的新候选数组 */]});
+// binding.reset(); binding.commit();
 // 卸载时调用 binding.destroy()。
 ```
 
-复制 `web/adapter.mjs` 与构建出的 `web/mooninput.mjs` 接入网页时，保留许可证与 notices。使用 `type=text`；`type=number` 不提供所需的文本选区接口。
+使用文本型 input 和 `inputmode`；`type=number/date` 不提供所需的文本选区接口。适配器处理粘贴、组合输入结束、原生回填、撤销／重做和表单重置。`updateOptions` 失败保留原配置和状态，成功后清空旧规则历史；数字／日期的格式更新若会重新解释当前完整值，也会拒绝，应先清空或显式转换。JSON 使用声明式规则与固定处理模式；任意业务回调通过原生 MoonBit API 提供。
 
-CLI 由 Node 处理文件和参数，计算由编译后的 MoonBit 执行：
+`number(pad_fraction=true)` 在编辑时仅为完整提交值补零；顶层 JSON 数字绑定在显式 `commit()` 或失焦后将补零写入显示与编辑内容。输入中的生成字符不会提前改变下一次键入的数值。日期配置也可以使用 `YYYY年MM月DD日` 等字面量格式，完整值仍为 ISO 日期。
 
-```sh
-node cli/mooninput.mjs --date 2026-10-02
-node cli/mooninput.mjs --decimal 9007199254740993.10
-node cli/mooninput.mjs --pattern "AA-####" ab1234
-node cli/mooninput.mjs --replay examples/events.json
+## CLI 与无界面复用
+
+将下列配置保存为 `config.json`，可在 Node 中使用同一个编译核心：
+
+```json
+{
+  "kind": "dynamic",
+  "masks": [
+    {"name": "short", "kind": "pattern", "pattern": "##-##"},
+    {"name": "long", "kind": "pattern", "pattern": "###-###"}
+  ]
+}
 ```
 
-退出码：`0` 成功，`1` 编辑被拒绝或单值未完成/无效，`2` 参数、文件或规则错误。回放输出每一步状态。
+```sh
+node cli/mooninput.mjs --config config.json 123456
+node cli/mooninput.mjs --replay examples/events.json
+node cli/mooninput.mjs --date 2026-10-15
+node cli/mooninput.mjs --decimal 9007199254740993.10
+node cli/mooninput.mjs --pattern "AA-####" ab1234
+```
+
+`--config` 读取声明式配置，`--replay` 读取配置及逐步编辑操作，输出引擎状态和轨迹。也可在 MoonBit 中直接使用 `pipe`，无须维护编辑器或 DOM。退出码：`0` 成功，`1` 编辑被拒绝或单值未完成／无效，`2` 参数、文件或规则错误。
 
 ## 验证与发布
 
@@ -114,6 +179,7 @@ moon check --target js
 moon check --target wasm-gc
 moon test --target js
 moon test --target wasm-gc
+moon build --target wasm-gc
 node scripts/build.mjs
 node --test tests/*.test.mjs
 node scripts/check-consumer.mjs
@@ -121,16 +187,27 @@ node scripts/check-examples.mjs
 python scripts/check-mooncake.py
 ```
 
-Linux/Windows CI 覆盖检查、构建、测试。包含 39 项 MoonBit 测试、独立消费者、12,000 次随机编辑模型对照、1,000 组精确小数往返、4,800 个日期样本和浏览器检查。当前结果见 [Actions](https://github.com/YeeHh2004/mooninput/actions)。
+[CI](.github/workflows/ci.yml) 在 Linux／Windows 执行检查、构建和测试，验证独立消费者、两个后端的示例输出与发布包内容。测试覆盖动态切换、自定义校验、组合／可选／重复、正则前缀与边界、精确数值、日期、显示映射及错误恢复；另有 12,000 次随机编辑模型对照、1,000 组小数往返和 4,800 个日期样本。
 
-浏览器测试额外需要 `npm install`、`npx playwright install chromium`，再运行 `node tests/browser.mjs`。组合输入采用合成事件测试，不代表所有实体手机/输入法均已验证，见 [验证说明](docs/VERIFICATION.md)。
+浏览器测试需要额外开发依赖；运行下列命令验证 Chromium，将环境变量 `BROWSER_ENGINE` 设为 `firefox` 或 `webkit` 可选择其他引擎：
 
-Mooncakes 分发 MoonBit 核心、协议包、测试、文档和可运行样例；网页、Node CLI 和工具保留在 GitHub。`node scripts/check-consumer.mjs --registry` 从公共注册表安装，并核对核心源码及两个后端的运行结果。
+```sh
+npm install
+npx playwright install chromium firefox webkit
+node tests/browser.mjs
+node tests/advanced-browser.mjs
+```
+
+[验证说明](docs/VERIFICATION.md) 记录复现方式；实际通过数量与证据以 [Actions](https://github.com/YeeHh2004/mooninput/actions) 对应提交为准。合成输入法事件和三种浏览器引擎测试不代表所有实体手机、输入法或辅助技术均已验证。
+
+Mooncakes 分发 MoonBit 核心、协议包、测试、文档和可运行样例；网页、CLI 和开发工具在 GitHub。`node scripts/check-consumer.mjs --registry` 从公共注册表安装，核对源码并在 JS／Wasm GC 上构建运行。发行包与公开包的验证入口见[验收导航](docs/REVIEW.md)。
 
 ## 来源与许可
 
-原创、AI 辅助实现，**MIT**。参考 IMask 展示的通用输入编辑需求，未复制其源码，也不宣称 API 兼容。完整说明见 [NOTICE](NOTICE.md)。不验证号码是否真实可用，不处理支付，不替代服务端业务校验。
+原创、AI 辅助实现，**MIT**。参考 [IMask 官方指南](https://imask.js.org/guide.html) 的通用功能分类，以 MoonBit 实现规则与编辑模型；未复制其源码，不宣称 JavaScript API 兼容或完整替代。来源与标准库许可见 [NOTICE](NOTICE.md)。生态查重范围及已有项目关系见 [SELECTION](docs/SELECTION.md)。
+
+本库处理字段输入及完整值，不替代跨字段、服务端或真实身份验证，也不执行支付。隐藏字符仅改变视觉显示，调用方仍可读取 raw/value。
 
 ## English
 
-MoonInput is an immutable structured-input editing engine written in MoonBit. It handles pattern masks, exact decimal text, Gregorian date validity, selection replacement, deletion, formatted paste and UTF-16 caret mapping on JavaScript and Wasm GC. A browser adapter adds DOM events, composition deferral and bounded undo/redo; a Node CLI replays edits through the compiled engine. See the English [API](docs/API.md), [behavior contract](docs/BEHAVIOR.md) and [development guide](docs/DEVELOPMENT.md).
+MoonInput is a composable structured-input editing library written in MoonBit, targeting JavaScript and Wasm GC. It provides dynamic masks, custom definitions and validation callbacks, named composite and repeated blocks, a prefix-aware NFA regex subset, ranges, enums, exact decimal strings, configurable Gregorian dates, presentation options and immutable UTF-16 editing. A browser adapter and Node CLI share the compiled engine. Version 0.2 broadens the original fixed-format scope; the [IMask feature matrix](docs/IMASK-COVERAGE.md) describes implemented behavior and remaining differences without claiming API compatibility.

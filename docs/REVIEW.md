@@ -1,14 +1,16 @@
 # 三分钟体验与验收导航
 
-MoonInput 解决的是多个行业共享的单字段输入编辑问题。电商和进销存需要精确数量、报价；预约和登记需要日期与编号；联系表单需要数字分组、粘贴和中间修改。业务系统提供自己的规则，MoonInput 负责编辑过程中的显示、原始值和选区，不依赖某一行业协议。
+MoonInput 0.2 将动态候选、正则、范围、枚举、函数校验与命名区块放进同一套可组合 MoonBit 模型。业务可定义并嵌套自己的规则，模型同时用于浏览器输入、无界面数据规范化和命令行回放。对初审反馈的逐项回应见 [升级说明](UPGRADE-0.2.md)，与 IMask 的具体能力和差异见 [功能对照](IMASK-COVERAGE.md)。
 
 ## 直接体验
 
 打开 [在线演示](https://yeehh2004.github.io/mooninput/)：
 
-1. 联系信息卡片点“填入示例”，选中中间四位并修改，再“预览提交”：显示保留分组，提交内容是纯数字。多输一位会提示并保留原内容。
-2. 数量与金额卡片点“大数示例”，预览提交：`9007199254740993.10` 保持原精度。选中金额输入 `-` 时处于未完成状态，继续输入 `.5` 后提交值为 `-0.5`。
-3. 预约与登记卡片点“试试无效日期”，将 `2023` 改成 `2024`：闰日错误解除，再提交日期与编号。每个场景的“重置”恢复默认值并清空本字段历史。
+1. 进入[可组合规则示例](https://yeehh2004.github.io/mooninput/#adv-examples)，在动态编号输入框先输入四位，再添加第五位：分组和当前规则名称变化；删除后候选重新选择。
+2. 尝试范围组合时间、正则用户名、自定义十六进制字符、小数点逗号与日期顺序六张卡片；时间返回命名字段，小数提交值保持精确字符串，错误可继续编辑修复。
+3. 在 JSON 工作台切换十种预设，或自行修改动态、组合、可选、重复、校验及展示配置。应用合法规则后输入；非法规则会提示并保留旧输入。查看完整引擎状态并尝试撤销／重做。
+
+原来的三个基础场景也保留，便于检查手机号、精度与日期修复。业务回调并未写死在网页：运行 `moon run examples/rules --target wasm-gc`，可验证纯 MoonBit 自定义校验码、递增数字函数规则及其他构造器。
 
 无需配置密钥或后端。离线体验可下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest)，解压后使用 Node.js 22+ 执行 `node scripts/serve.mjs`。纯 MoonBit 的可运行样例见 [examples/basic](../examples/basic)。
 
@@ -27,8 +29,8 @@ Moonform 管理表单字段状态、验证时机和提交；MoonInput 负责字�
 | 结构清晰、核心功能完整 | [API](API.md)、[目录说明](DEVELOPMENT.md#structure)、[行为边界](BEHAVIOR.md) |
 | README 安装、使用与示例 | [README](../README.md) 的版本化安装命令、MoonBit 代码、浏览器和 CLI 步骤 |
 | CI 覆盖检查、构建、测试 | Linux/Windows 执行 moon check/build/test，另有接口、包内容及示例输出检查 |
-| 可运行样例 | [基础样例](../examples/basic)、[独立消费者](../examples/consumer)、在线三个业务场景 |
-| 核心路径测试 | 39 项 MoonBit 测试、14 项 Node 测试与生成模型；三种浏览器引擎逐个执行 36 项检查，见 [验证方法](VERIFICATION.md) |
+| 可运行样例 | [基础样例](../examples/basic)、[十类规则与回调](../examples/rules)、[独立消费者](../examples/consumer)、六类扩展示例及 JSON 工作台 |
+| 核心路径测试 | 90 项 MoonBit 测试、24 项 Node 测试与独立参考模型；每种浏览器引擎执行 36 项基础检查和 39 项扩展检查，见 [验证方法](VERIFICATION.md) |
 | 发布 Mooncakes | [包与 API](https://mooncakes.io/docs/YeeHh2004/mooninput)；[公开安装工作流](../.github/workflows/registry.yml) 在两个系统实际下载、构建和运行 |
 | OSI 许可证与来源 | [MIT](../LICENSE)、[原创与参考说明](../NOTICE.md)、[标准库许可证](../licenses/MoonBit-core-LICENSE) |
 

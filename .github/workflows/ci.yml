@@ -53,8 +53,11 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           node tests/browser.mjs
+          node tests/advanced-browser.mjs
           BROWSER_ENGINE=firefox node tests/browser.mjs
+          BROWSER_ENGINE=firefox node tests/advanced-browser.mjs
           BROWSER_ENGINE=webkit node tests/browser.mjs
+          BROWSER_ENGINE=webkit node tests/advanced-browser.mjs
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-24.04'
         with:
@@ -67,4 +70,5 @@ jobs:
           path: |
             _build/core-coverage.xml
             dist/browser-*-results.json
+            dist/advanced-*-results.json
             dist/browser-screenshots/

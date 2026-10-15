@@ -1,15 +1,17 @@
 """Audit the exact publish archive, without uploading or reading credentials."""
 from pathlib import Path
-import hashlib, json, subprocess, zipfile
+import hashlib, json, subprocess, zipfile, re
 root = Path(__file__).resolve().parent.parent
 subprocess.run(['moon', 'package'], cwd=root, check=True)
-archive = root / '_build/publish/YeeHh2004-mooninput-0.1.1.zip'
+version = re.search(r'^version\s*=\s*"([^"]+)"', (root / 'moon.mod').read_text(), re.M)[1]
+archive = root / f'_build/publish/YeeHh2004-mooninput-{version}.zip'
 with zipfile.ZipFile(archive) as z:
     assert z.testzip() is None
     names = set(z.namelist())
     required = {'moon.mod', 'moon.pkg', 'pkg.generated.mbti', 'editor.mbt', 'pattern.mbt',
                 'decimal.mbt', 'date.mbt', 'LICENSE', 'README.md', 'NOTICE.md',
-                'examples/basic/main.mbt', 'protocol/process.mbt', 'docs/BEHAVIOR.md'}
+                'examples/basic/main.mbt', 'examples/rules/main.mbt', 'protocol/process.mbt', 'docs/BEHAVIOR.md',
+                'engine_rules.mbt', 'regex_mask.mbt', 'localized.mbt', 'presentation.mbt', 'docs/IMASK-COVERAGE.md'}
     assert required <= names, f'Missing files: {required - names}'
     for name in names:
         p = Path(name)
