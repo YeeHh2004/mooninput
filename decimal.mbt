@@ -74,7 +74,7 @@ fn render_decimal(
     display += c.to_string()
     ends.push(display.length())
   }
-  Ok({ raw, display, starts, ends, })
+  Ok(make_render(raw, display, starts, ends))
 }
 
 ///|

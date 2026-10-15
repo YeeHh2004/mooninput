@@ -30,6 +30,7 @@ priv enum Slot {
   Letter
   Alnum
   Printable
+  Custom((Char) -> Char?)
 }
 
 ///|
@@ -44,6 +45,27 @@ priv enum Kind {
   PatternKind(Pattern)
   DateKind(Pattern)
   DecimalKind(Int, Bool, Bool)
+  ExtensionKind(Extension)
+}
+
+///|
+priv struct Extension {
+  parse : (String) -> Result[Render, InputError]
+  capacity : Int?
+}
+
+///|
+/// A named canonical value produced by a composite mask.
+pub(all) struct FieldValue {
+  name : String
+  value : String
+} derive(Eq, @debug.Debug)
+
+///|
+pub struct Definition {
+  priv token : Char
+  priv accept : (Char) -> Bool
+  priv normalize : (Char) -> Char
 }
 
 ///|
@@ -58,6 +80,11 @@ priv struct Render {
   display : String
   starts : Array[Int]
   ends : Array[Int]
+  state : Status?
+  canonical : String?
+  active : String?
+  fields : Array[FieldValue]
+  reconcile_by_edit : Bool
 }
 
 ///|
@@ -85,6 +112,7 @@ fn Slot::accept(self : Slot, c : Char) -> Char? {
         None
       }
     Printable => if c.is_printable() { Some(c) } else { None }
+    Custom(accept) => accept(c)
   }
 }
 
@@ -105,3 +133,9 @@ pub extend Selection with Eq::{equal, not_equal}
 
 ///|
 pub extend Status with Eq::{equal, not_equal}
+
+///|
+pub extend FieldValue with Eq::{equal, not_equal}
+
+///|
+pub extend FieldValue with @debug.Debug::{to_repr}

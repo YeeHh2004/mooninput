@@ -23,7 +23,12 @@ pub fn Editor::reconcile(
   if text == self.display() {
     return self.select(start, end)
   }
-  let next = match self.set_value(text) {
+  let parsed = if self.render.reconcile_by_edit {
+    Err(InvalidValue("presentation requires edit reconciliation"))
+  } else {
+    self.set_value(text)
+  }
+  let next = match parsed {
     Ok(e) => e
     Err(_) => {
       // Native input may leave previously generated separators in old positions.
@@ -36,6 +41,16 @@ pub fn Editor::reconcile(
             prefix < new_chars.length() &&
             old_chars[prefix] == new_chars[prefix] {
         prefix += 1
+      }
+      if self.render.reconcile_by_edit && start == end {
+        let mut caret_scalars = 0
+        for offset, c in text.iter2() {
+          if offset + c.utf16_len() <= start {
+            caret_scalars += 1
+          }
+        }
+        let added = (new_chars.length() - old_chars.length()).max(0)
+        prefix = prefix.min((caret_scalars - added).max(0))
       }
       let mut suffix = 0
       while suffix < old_chars.length() - prefix &&
@@ -84,6 +99,11 @@ pub fn Editor::reconcile(
         match parse_pattern(p, prefix, 0) {
           Ok(raw) => next.display_offset(raw.length()).unwrap_or(0)
           Err(_) => 0
+        }
+      ExtensionKind(_) =>
+        match self.mask.render_input(prefix) {
+          Ok(render) => next.display_offset(render.raw.length()).unwrap_or(0)
+          Err(_) => start.min(next.display().length())
         }
     }
   }

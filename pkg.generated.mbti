@@ -6,23 +6,60 @@ import {
 }
 
 // Values
+pub fn composite(Array[MaskPart]) -> Result[Mask, InputError]
+
+pub fn custom((String) -> Status, max_length? : Int, prepare? : (String) -> String) -> Result[Mask, InputError]
+
+pub fn date(format? : String, min? : String, max? : String) -> Result[Mask, InputError]
+
 pub fn decimal(precision? : Int, signed? : Bool, grouped? : Bool) -> Result[Mask, InputError]
+
+pub fn definition(Char, (Char) -> Bool, normalize? : (Char) -> Char) -> Definition
+
+pub fn dynamic(Array[(String, Mask)], dispatch? : (String) -> String?) -> Result[Mask, InputError]
+
+pub fn enumeration(Array[String], case_sensitive? : Bool) -> Result[Mask, InputError]
 
 pub fn iso_date() -> Mask
 
-pub fn pattern(String) -> Result[Mask, InputError]
+pub fn number(precision? : Int, signed? : Bool, radix? : Char, group_separator? : String, map_radix? : String, min? : String, max? : String, pad_fraction? : Bool, normalize_zeros? : Bool, autofix? : Bool) -> Result[Mask, InputError]
+
+pub fn pattern(String, definitions? : Array[Definition]) -> Result[Mask, InputError]
+
+pub fn pipe(Mask, String, unmask? : Bool) -> Result[String, InputError]
+
+pub fn presentation(Mask, placeholder? : Char, concealed? : Char, eager? : Bool) -> Result[Mask, InputError]
+
+pub fn range(Int, Int, width? : Int, autofix? : Bool) -> Result[Mask, InputError]
+
+pub fn regex(String, case_insensitive? : Bool, max_length? : Int) -> Result[Mask, InputError]
+
+pub fn repeat(Mask, Int, Int) -> Result[Mask, InputError]
+
+pub fn with_prepare(Mask, (String) -> String) -> Mask
+
+pub fn with_validation(Mask, (String) -> Status) -> Mask
+
+pub fn with_value(Mask, (String) -> String) -> Mask
 
 // Errors
 
 // Types and methods
+pub struct Definition {
+  // private fields
+}
+
 pub struct Editor {
   // private fields
 }
+pub fn Editor::active_mask(Self) -> String?
 pub fn Editor::backspace(Self) -> Result[Self, InputError]
+pub fn Editor::commit(Self, (String) -> String) -> Result[Self, InputError]
 pub fn Editor::delete_forward(Self) -> Result[Self, InputError]
 pub fn Editor::display(Self) -> String
 pub fn Editor::display_offset(Self, Int) -> Result[Int, InputError]
-pub fn Editor::insert(Self, String) -> Result[Self, InputError]
+pub fn Editor::fields(Self) -> Array[FieldValue]
+pub fn Editor::insert(Self, String, overwrite? : Bool, skip_invalid? : Bool) -> Result[Self, InputError]
 pub fn Editor::new(Mask, initial? : String) -> Result[Self, InputError]
 pub fn Editor::raw(Self) -> String
 pub fn Editor::raw_index(Self, Int) -> Result[Int, InputError]
@@ -32,6 +69,15 @@ pub fn Editor::selection(Self) -> Selection
 pub fn Editor::set_value(Self, String) -> Result[Self, InputError]
 pub fn Editor::status(Self) -> Status
 pub fn Editor::value(Self) -> Result[String, InputError]
+pub fn Editor::with_mask(Self, Mask) -> Result[Self, InputError]
+
+pub(all) struct FieldValue {
+  name : String
+  value : String
+} derive(Eq, @debug.Debug)
+pub fn FieldValue::equal(Self, Self) -> Bool
+pub fn FieldValue::not_equal(Self, Self) -> Bool
+pub fn FieldValue::to_repr(Self) -> @debug.Repr
 
 pub(all) enum InputError {
   InvalidPattern(String)
@@ -49,7 +95,14 @@ pub fn InputError::to_repr(Self) -> @debug.Repr
 pub struct Mask {
   // private fields
 }
+pub fn Mask::capacity(Self) -> Int
 pub fn Mask::format(Self, String) -> Result[String, InputError]
+
+pub(all) enum MaskPart {
+  Literal(String)
+  Block(String, Mask)
+  Optional(String, Mask)
+}
 
 pub(all) struct Selection {
   start : Int

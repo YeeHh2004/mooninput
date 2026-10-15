@@ -8,6 +8,12 @@ fn Mask::render_input(self : Mask, text : String) -> Result[Render, InputError] 
       }
     DecimalKind(precision, signed, grouped) =>
       parse_decimal(text, precision, signed, grouped)
+    ExtensionKind(e) =>
+      if text.length() > 8192 {
+        Err(TooLong(8192))
+      } else {
+        (e.parse)(text)
+      }
   }
 }
 
@@ -44,6 +50,9 @@ pub fn Editor::selection(self : Editor) -> Selection {
 
 ///|
 pub fn Editor::status(self : Editor) -> Status {
+  if self.render.state is Some(state) {
+    return state
+  }
   let n = self.render.raw.length()
   if n == 0 {
     return Empty
@@ -57,6 +66,7 @@ pub fn Editor::status(self : Editor) -> Status {
       }
     DateKind(_) => date_status(self.render.raw)
     DecimalKind(_, _, _) => decimal_status(self.render.raw)
+    ExtensionKind(_) => Incomplete
   }
 }
 
@@ -135,6 +145,9 @@ fn Editor::replace_raw(
   end : Int,
   text : String,
 ) -> Result[Editor, InputError] {
+  if start == end && text == "" {
+    return Ok(self)
+  }
   let inserted = match self.mask.kind {
     PatternKind(p) | DateKind(p) => parse_pattern(p, text, start)
     DecimalKind(precision, signed, grouped) =>
@@ -142,6 +155,7 @@ fn Editor::replace_raw(
         Ok(render) => Ok(render.raw)
         Err(e) => Err(e)
       }
+    ExtensionKind(_) => Ok(text.to_array())
   }
   let inserted = match inserted {
     Ok(chars) => chars
@@ -165,11 +179,19 @@ fn Editor::replace_raw(
       }
     DecimalKind(precision, signed, grouped) =>
       render_decimal(raw, precision, signed, grouped)
+    ExtensionKind(_) => self.mask.render_input(String::from_array(raw))
   }
   match rendered {
     Err(e) => Err(e)
     Ok(render) => {
-      let index = start + inserted.length()
+      let inserted_length = match self.mask.kind {
+        ExtensionKind(_) =>
+          (render.raw.length() - (self.render.raw.length() - (end - start))).max(
+            0,
+          )
+        _ => inserted.length()
+      }
+      let index = (start + inserted_length).min(render.raw.length())
       let caret = if index == 0 { 0 } else { render.ends[index - 1] }
       Ok({ mask: self.mask, render, selection: { start: caret, end: caret, }, })
     }
@@ -181,9 +203,44 @@ fn Editor::replace_raw(
 pub fn Editor::insert(
   self : Editor,
   text : String,
+  overwrite? : Bool = false,
+  skip_invalid? : Bool = false,
 ) -> Result[Editor, InputError] {
+  if text.length() > 8192 {
+    return Err(TooLong(8192))
+  }
+  if skip_invalid {
+    let mut current = self
+    for c in text {
+      match current.insert(c.to_string(), overwrite~) {
+        Ok(next) => current = next
+        Err(_) => ()
+      }
+    }
+    return Ok(current)
+  }
   let start = self.raw_index(self.selection.start).unwrap()
-  let end = self.raw_index(self.selection.end).unwrap()
+  let mut end = self.raw_index(self.selection.end).unwrap()
+  if overwrite && self.selection.start == self.selection.end {
+    let count = match self.mask.kind {
+      PatternKind(p) | DateKind(p) =>
+        match parse_pattern(p, text, start) {
+          Ok(chars) => chars.length()
+          Err(error) => return Err(error)
+        }
+      DecimalKind(precision, signed, grouped) =>
+        match parse_decimal(text, precision, signed, grouped) {
+          Ok(r) => r.raw.length()
+          Err(error) => return Err(error)
+        }
+      ExtensionKind(_) =>
+        match self.mask.render_input(text) {
+          Ok(r) => r.raw.length()
+          Err(_) => text.to_array().length()
+        }
+    }
+    end = (start + count).min(self.render.raw.length())
+  }
   self.replace_raw(start, end, text)
 }
 
@@ -232,10 +289,14 @@ pub fn Editor::value(self : Editor) -> Result[String, InputError] {
     Incomplete => Err(InvalidValue("incomplete"))
     Invalid(reason) => Err(InvalidValue(reason))
     Complete =>
-      match self.mask.kind {
-        DateKind(_) => Ok(self.display())
-        DecimalKind(_, _, _) => Ok(decimal_value(self.render.raw))
-        _ => Ok(self.raw())
+      if self.render.canonical is Some(value) {
+        Ok(value)
+      } else {
+        match self.mask.kind {
+          DateKind(_) => Ok(self.display())
+          DecimalKind(_, _, _) => Ok(decimal_value(self.render.raw))
+          _ => Ok(self.raw())
+        }
       }
   }
 }

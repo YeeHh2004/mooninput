@@ -1,0 +1,5 @@
+import {
+  "YeeHh2004/mooninput" @input,
+}
+
+pkgtype(kind: "executable")

@@ -1,11 +1,30 @@
 ///|
 /// Compile # digit, A ASCII letter, * ASCII alphanumeric, X printable scalar.
 /// A single optional suffix in brackets is supported. Backslash escapes literals.
-pub fn pattern(source : String) -> Result[Mask, InputError] {
+pub fn pattern(
+  source : String,
+  definitions? : Array[Definition] = [],
+) -> Result[Mask, InputError] {
   if source.length() > 4096 {
     return Err(TooLong(4096))
   }
   let chars = source.to_array()
+  if definitions.length() > 128 {
+    return Err(InvalidConfig("at most 128 definitions"))
+  }
+  for i, d in definitions {
+    if d.token == '[' ||
+      d.token == ']' ||
+      d.token == '\\' ||
+      !d.token.is_printable() {
+      return Err(InvalidConfig("reserved definition token"))
+    }
+    for j in 0..<i {
+      if definitions[j].token == d.token {
+        return Err(InvalidConfig("duplicate definition token"))
+      }
+    }
+  }
   let slots : Array[Slot] = []
   let prefixes : Array[String] = []
   let mut prefix = ""
@@ -42,12 +61,31 @@ pub fn pattern(source : String) -> Result[Mask, InputError] {
       }
       closed = true
     } else {
-      let slot = match c {
+      let mut slot = match c {
         '#' => Some(Digit)
         'A' => Some(Letter)
         '*' => Some(Alnum)
         'X' => Some(Printable)
         _ => None
+      }
+      for d in definitions {
+        if d.token == c {
+          slot = Some(
+            Custom(ch => {
+              if (d.accept)(ch) {
+                let normalized = (d.normalize)(ch)
+                if (d.accept)(normalized) {
+                  Some(normalized)
+                } else {
+                  None
+                }
+              } else {
+                None
+              }
+            }),
+          )
+          break
+        }
       }
       match slot {
         Some(s) => {
@@ -161,7 +199,7 @@ fn render_pattern(p : Pattern, raw : Array[Char]) -> Render {
     display += c.to_string()
     ends.push(display.length())
   }
-  { raw, display, starts, ends, }
+  make_render(raw, display, starts, ends)
 }
 
 ///|
@@ -177,6 +215,11 @@ pub fn Mask::format(self : Mask, text : String) -> Result[String, InputError] {
       match parse_decimal(text, precision, signed, grouped) {
         Ok(render) => Ok(render.display)
         Err(e) => Err(e)
+      }
+    ExtensionKind(e) =>
+      match (e.parse)(text) {
+        Ok(render) => Ok(render.display)
+        Err(error) => Err(error)
       }
   }
 }
