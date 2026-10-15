@@ -1,4 +1,5 @@
 import {bindInput,createEditor} from './adapter.mjs';
+import {mountAdvanced} from './advanced.mjs';
 const $=id=>document.getElementById(id);
 const bindings=new Map();
 const statusText={empty:'等待输入',incomplete:'尚未填完',complete:'可以提交',invalid:'请检查日期'};
@@ -43,4 +44,5 @@ $('apply-pattern').addEventListener('click',()=>{
 $('copy-install').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText('moon add YeeHh2004/mooninput');$('copy-install').textContent='已复制';}catch{$('copy-install').textContent='请选中复制';}
 });
+mountAdvanced();
 document.documentElement.dataset.ready='true';

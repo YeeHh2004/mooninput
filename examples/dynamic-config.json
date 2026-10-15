@@ -1,0 +1,7 @@
+{
+  "kind": "dynamic",
+  "masks": [
+    {"name": "short", "kind": "pattern", "pattern": "##-##"},
+    {"name": "long", "kind": "pattern", "pattern": "###-###"}
+  ]
+}

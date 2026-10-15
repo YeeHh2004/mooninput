@@ -3,7 +3,7 @@ const attached=new WeakSet();
 
 // This file transports events and selections. All value rules are in MoonBit.
 export function createEditor(config, initial = '') {
-  const settings = Object.freeze(structuredClone(config));
+  let settings = Object.freeze(structuredClone(config));
   let state;
   function request(op, text='', start=state?.start??0, end=state?.end??start, value=state?.raw??initial) {
     return JSON.parse(processInput(JSON.stringify({config:settings,value,op,start,end,text})));
@@ -11,8 +11,13 @@ export function createEditor(config, initial = '') {
   const first=request('init');
   if (!first.ok) throw new TypeError(first.error);
   state=first.state;
+  function snapshot(){
+    const copy=structuredClone(state);
+    copy.fields=Object.freeze((copy.fields??[]).map(field=>Object.freeze(field)));
+    return Object.freeze(copy);
+  }
   return {
-    get state(){return Object.freeze({...state});},
+    get state(){return snapshot();},
     apply(op,text='',start,end){
       const from=start??state.start;
       const to=end??(start==null?state.end:from);
@@ -26,11 +31,21 @@ export function createEditor(config, initial = '') {
       const result=request('select','',snapshot.start,snapshot.end,init.state.raw);
       if (result.ok) state=result.state;
       return structuredClone(result);
+    },
+    updateOptions(patch){
+      if(!patch||typeof patch!=='object'||Array.isArray(patch))return {ok:false,code:'config',error:'Options must be an object',state:snapshot()};
+      const next=Object.freeze(structuredClone({...settings,...patch}));
+      const result=JSON.parse(processInput(JSON.stringify({config:next,value:state.raw,op:'init',start:0,end:0,text:''})));
+      if(result.ok&&state.status==='complete'&&settings.kind===next.kind&&['number','date'].includes(next.kind)&&result.state.value!==state.value){
+        return {ok:false,code:'value',error:'These options reinterpret the current value. Clear or explicitly convert it before changing the format.',state:snapshot()};
+      }
+      if(result.ok){settings=next;state=result.state;}
+      return structuredClone(result);
     }
   };
 }
 
-export function bindInput(element, config, {onChange=()=>{},onError=()=>{},historyLimit=100}={}) {
+export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onComplete=()=>{},onError=()=>{},historyLimit=100}={}) {
   if (!element || element.tagName!=='INPUT' || !['text','tel','search','password','url'].includes(element.type)) {
     throw new TypeError('bindInput requires a text-like input with selection APIs');
   }
@@ -41,6 +56,7 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
   const listeners=[];
   let composing=false, disposed=false;
   let past=[], future=[];
+  let rendered;
   const readSelection=()=>({start:element.selectionStart??0,end:element.selectionEnd??0});
   const editable=()=>!disposed&&!element.disabled&&!element.readOnly;
   function render(focus=false){
@@ -48,7 +64,10 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
     element.value=state.display;
     if (focus || element.ownerDocument.activeElement===element) element.setSelectionRange(state.start,state.end);
     element.setAttribute('aria-invalid',String(state.status==='invalid'));
+    const previous=rendered;rendered=state;
     onChange(state);
+    if(previous&&(previous.raw!==state.raw||previous.display!==state.display||previous.value!==state.value))onAccept(state);
+    if(previous&&state.status==='complete'&&(previous.status!=='complete'||previous.value!==state.value))onComplete(state);
   }
   function transition(op,text='',selection=readSelection()) {
     if (disposed) throw new Error('binding has been destroyed');
@@ -119,6 +138,7 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
     composing=false;
     if(editable())transition('reconcile',element.value);
   });
+  listen('blur',()=>{if(!composing&&!disposed&&editor.state.status==='complete')transition('commit');});
   listen('keydown',event=>{
     if(!editable()||composing||event.isComposing||event.altKey||!(event.ctrlKey||event.metaKey))return;
     const key=event.key.toLowerCase();
@@ -130,6 +150,13 @@ export function bindInput(element, config, {onChange=()=>{},onError=()=>{},histo
   return {
     get state(){return editor.state;},
     setValue(value){return transition('set',value,{start:0,end:0});},
+    commit(){return transition('commit');},
+    updateOptions(patch){
+      if(disposed)throw new Error('binding has been destroyed');
+      const result=editor.updateOptions(patch);
+      if(result.ok){past=[];future=[];}
+      render();if(!result.ok)onError({code:result.code,message:result.error});return result;
+    },
     reset,undo,redo,
     destroy(){if(disposed)return; disposed=true;attached.delete(element);for(const [target,name,fn,capture]of listeners)target.removeEventListener(name,fn,capture);past=[];future=[];}
   };

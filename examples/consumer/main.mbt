@@ -36,3 +36,34 @@ test "independent consumer rejects precision loss and bad config" {
   )
   assert_eq(amount.value(), Ok("0.10"))
 }
+
+///|
+test "independent consumer composes and dispatches public rules" {
+  let combined = @input.composite([
+    @input.Block("letters", @input.regex("[A-Z]{2}").unwrap()),
+    @input.Literal("/"),
+    @input.Block("digits", @input.range(0, 99, width=2).unwrap()),
+  ]).unwrap()
+  let edited = @input.Editor::new(combined, initial="AB42").unwrap()
+  assert_eq(edited.display(), "AB/42")
+  assert_eq(edited.value(), Ok("AB/42"))
+  assert_eq(edited.fields()[0].value, "AB")
+  let choice = @input.dynamic([
+    ("code", combined),
+    ("word", @input.enumeration(["ON", "OFF"]).unwrap()),
+  ]).unwrap()
+  assert_eq(
+    @input.Editor::new(choice, initial="OFF").unwrap().active_mask(),
+    Some("word"),
+  )
+  let custom = @input.with_validation(@input.pattern("####").unwrap(), value => {
+    if value.length() < 4 {
+      @input.Incomplete
+    } else if value.has_prefix("12") {
+      @input.Complete
+    } else {
+      @input.Invalid("prefix")
+    }
+  })
+  assert_eq(@input.pipe(custom, "1234", unmask=true), Ok("1234"))
+}

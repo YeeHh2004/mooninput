@@ -1,0 +1,16 @@
+{
+  "config": {
+    "kind": "composite",
+    "parts": [
+      {"kind": "block", "name": "hour", "rule": {"kind": "range", "from": 0, "to": 23, "width": 2}},
+      {"kind": "literal", "literal": ":"},
+      {"kind": "block", "name": "minute", "rule": {"kind": "range", "from": 0, "to": 59, "width": 2}}
+    ]
+  },
+  "value": "1200",
+  "steps": [
+    {"op": "select", "start": 3, "end": 5},
+    {"op": "insert", "text": "59"},
+    {"op": "commit"}
+  ]
+}
