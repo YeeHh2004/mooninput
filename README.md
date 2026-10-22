@@ -9,6 +9,8 @@
 
 0.2 将原有的固定格式扩展为可复用规则模型：一个字段可随内容切换规则，业务可提供自己的字符定义与校验器，已有规则可以嵌套组合。参考 IMask 的通用功能范围，以 MoonBit 实现；配置语法与 API 有明确差异，完整能力及限制见[对照表](docs/IMASK-COVERAGE.md)。
 
+0.2.1 加固了实际接入路径：快照恢复会同时验证 raw、display 与选区，协议携带可选显示文本以保留组合分区；数值片段粘贴、日期数字后缀、深层规则更新与正则 UTF-16 续写限制均有回归检查。详见 [更新记录](CHANGELOG.md)。
+
 ## 可以解决什么问题
 
 - **多规格标识与批量录入：** 动态选择短码／长码，以自定义字符定义、命名区块和有限重复表达业务格式。
@@ -23,7 +25,7 @@
 可复现基线：MoonBit compiler/core **`0.10.14+7d59c7ec9`**，支持 **JS、Wasm GC**。使用 `moon version --all` 核对版本，固定工具链步骤见[开发说明](docs/DEVELOPMENT.md)。
 
 ```sh
-moon add YeeHh2004/mooninput@0.2.0
+moon add YeeHh2004/mooninput@0.2.1
 ```
 
 在 `moon.pkg` 中导入：
@@ -143,7 +145,9 @@ const binding = bindInput(document.querySelector('#identifier'), {
 // 卸载时调用 binding.destroy()。
 ```
 
-使用文本型 input 和 `inputmode`；`type=number/date` 不提供所需的文本选区接口。适配器处理粘贴、组合输入结束、原生回填、撤销／重做和表单重置。`updateOptions` 失败保留原配置和状态，成功后清空旧规则历史；数字／日期的格式更新若会重新解释当前完整值，也会拒绝，应先清空或显式转换。JSON 使用声明式规则与固定处理模式；任意业务回调通过原生 MoonBit API 提供。
+使用文本型 input 和 `inputmode`；`type=number/date` 不提供所需的文本选区接口。适配器处理粘贴、组合输入结束、原生回填、撤销／重做和表单重置。`updateOptions` 失败保留原配置和状态，成功后清空旧规则历史；新旧配置包含数字／日期规则时，包括嵌套在组合、动态候选或包装规则中的情形，若更新会改变当前完整提交值，也会拒绝，应先清空或显式转换。JSON 使用声明式规则与固定处理模式；任意业务回调通过原生 MoonBit API 提供。
+
+浏览器快照与历史保留显示文本，能恢复原先明确输入的组合分区。原生调用可使用 `Editor::restore(mask, raw, display, start, end)`；它会重新验证快照，拒绝不匹配的文本或非法选区。等值 raw 替换保留原分区；改变 raw 的编辑仍按已声明的分区规则解析。仅保存 raw 不能唯一还原所有变长组合。原生表单重置失败时也会恢复重置事件开始前的内容和选区。
 
 `number(pad_fraction=true)` 在编辑时仅为完整提交值补零；顶层 JSON 数字绑定在显式 `commit()` 或失焦后将补零写入显示与编辑内容。输入中的生成字符不会提前改变下一次键入的数值。日期配置也可以使用 `YYYY年MM月DD日` 等字面量格式，完整值仍为 ISO 日期。
 
@@ -187,7 +191,7 @@ node scripts/check-examples.mjs
 python scripts/check-mooncake.py
 ```
 
-[CI](.github/workflows/ci.yml) 在 Linux／Windows 执行检查、构建和测试，验证独立消费者、两个后端的示例输出与发布包内容。测试覆盖动态切换、自定义校验、组合／可选／重复、正则前缀与边界、精确数值、日期、显示映射及错误恢复；另有 12,000 次随机编辑模型对照、1,000 组小数往返和 4,800 个日期样本。
+[CI](.github/workflows/ci.yml) 在 Linux／Windows 执行检查、构建和测试，验证独立消费者、两个后端的示例输出与发布包内容。110 项 MoonBit 测试在 JS／Wasm GC 上覆盖动态切换、自定义校验、组合／可选／重复、严格快照恢复、正则前缀与边界、精确数值、日期、显示映射及错误恢复；另有 30 项 Node 测试，含 12,000 次随机编辑模型对照、1,000 组小数往返和 4,800 个日期样本。
 
 浏览器测试需要额外开发依赖；运行下列命令验证 Chromium，将环境变量 `BROWSER_ENGINE` 设为 `firefox` 或 `webkit` 可选择其他引擎：
 
@@ -196,9 +200,10 @@ npm install
 npx playwright install chromium firefox webkit
 node tests/browser.mjs
 node tests/advanced-browser.mjs
+node tests/acceptance-browser.mjs
 ```
 
-[验证说明](docs/VERIFICATION.md) 记录复现方式；实际通过数量与证据以 [Actions](https://github.com/YeeHh2004/mooninput/actions) 对应提交为准。合成输入法事件和三种浏览器引擎测试不代表所有实体手机、输入法或辅助技术均已验证。
+三个浏览器脚本共 91 项检查（基础 36、扩展 39、验收回归 16），CI 在三个引擎分别执行。[验证说明](docs/VERIFICATION.md) 记录复现方式；实际通过数量与证据以 [Actions](https://github.com/YeeHh2004/mooninput/actions) 对应提交为准。合成输入法事件和三种浏览器引擎测试不代表所有实体手机、输入法或辅助技术均已验证。
 
 Mooncakes 分发 MoonBit 核心、协议包、测试、文档和可运行样例；网页、CLI 和开发工具在 GitHub。`node scripts/check-consumer.mjs --registry` 从公共注册表安装，核对源码并在 JS／Wasm GC 上构建运行。发行包与公开包的验证入口见[验收导航](docs/REVIEW.md)。
 

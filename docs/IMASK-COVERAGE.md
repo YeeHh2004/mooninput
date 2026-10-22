@@ -6,7 +6,7 @@ MoonInput 0.2 参考 [IMask 官方指南](https://imask.js.org/guide.html) 的�
 
 | 功能族 | MoonInput 实现与验证入口 | 当前边界 |
 | --- | --- | --- |
-| 无界面模型、编辑快照 | `Editor`；[editor.mbt](../editor.mbt)、[editor_test.mbt](../editor_test.mbt) | 不可变快照；编辑失败保留旧值 |
+| 无界面模型、编辑快照 | `Editor`、`Editor::restore`；[editor.mbt](../editor.mbt)、[snapshot.mbt](../snapshot.mbt)、[acceptance_core_test.mbt](../acceptance_core_test.mbt) | 不可变快照；恢复时严格验证 raw／display／选区；编辑失败保留旧值 |
 | Pattern 与自定义字符定义 | `pattern`、`definition`；[pattern.mbt](../pattern.mbt)、[engine_rules_test.mbt](../engine_rules_test.mbt) | `#` 数字、`A` 字母、`*` 字母数字、`X` 可打印标量；语法与 IMask 不同 |
 | 可选区段 | Pattern 末尾 `[ ... ]`；`composite` 的 `Optional` | Pattern 字符串仅单个可选后缀；多个／嵌套可选使用组合 API |
 | 可复用命名区块与嵌套 | `composite`、`Block`、`Literal`、`Optional`、`Editor::fields`；[engine_rules.mbt](../engine_rules.mbt) | 有限容量和搜索预算；变长相邻区块按可完成的分区解析 |
@@ -27,7 +27,7 @@ MoonInput 0.2 参考 [IMask 官方指南](https://imask.js.org/guide.html) 的�
 | 覆盖输入／跳过非法字符 | `Editor::insert(overwrite=true, skip_invalid=true)` | 覆盖为同位置替换；不提供 IMask 的 `overwrite: "shift"` 模式；默认仍为整次编辑原子拒绝 |
 | 显示值、原始值、完整值 | `display / raw / value / status`；[extensions.mbt](../extensions.mbt) | 完整值为字符串；命名区块通过 `fields` 返回，不返回 JS Number／Date 对象 |
 | 固定部分的提交与区块值读取 | `composite` 的 `Literal`、`fields`、`with_value` | 组合完整值包含显示字面量；无 IMask `{...}`／`expose` 同语法开关 |
-| 更新规则／释放绑定 | 原生 `Editor::with_mask`；浏览器 `updateOptions`、`destroy` | 规则更新重新验证旧 raw；失败保留原配置和状态，成功清除旧规则历史；不承诺 IMask `updateOptions` 的完全相同行为 |
+| 更新规则／释放绑定 | 原生 `Editor::with_mask`；浏览器 `updateOptions`、`destroy` | 规则更新重新验证旧 raw；新旧规则树含数字／日期时保护当前完整提交值；失败保留原配置和状态，成功清除旧规则历史；不承诺 IMask `updateOptions` 的完全相同行为 |
 | 纯格式转换 | `pipe(mask, text, unmask=...)` | 显示字符串或完整提交字符串；不提供任意 JS 类型之间的 Pipe 转换 |
 | 浏览器输入、历史与表单重置 | [web/adapter.mjs](../web/adapter.mjs)、[浏览器测试](../tests/browser.mjs) | 文本型 input；合成输入法事件和三引擎检查，不代表所有实体键盘已验证 |
 | 值改变与完成事件 | `onChange`、`onAccept`、`onComplete`；[扩展浏览器检查](../tests/advanced-browser.mjs) | 接受值改变与进入／改变完整值时触发对应回调；名称和注册方式与 IMask 不同 |
@@ -38,6 +38,8 @@ MoonInput 0.2 参考 [IMask 官方指南](https://imask.js.org/guide.html) 的�
 支持全字符串匹配、捕获／非捕获分组、分支、字符类、反向字符类、点号，以及 `?`、`*`、`+`、`{m}`、`{m,n}`、`{m,}`。可省略全局 `^`／`$`。编辑时检查“当前前缀能否到达一个完整值”，因此 `AB-` 可以继续输入而不要求每次都已完整匹配。`\d`、`\w`、`\s` 与大小写折叠采用文档声明的 ASCII 规则。
 
 反向引用、前后查找、内联标志、懒／占有量词及其余未声明的 ECMAScript 扩展会返回配置错误。实现使用 NFA 状态集合，不调用宿主正则引擎。正则源最多 2048 UTF-16 单元、嵌套 32 层、重复计数 256、编译状态 2048、输入 8192 UTF-16 单元。原生 `regex(max_length=...)` 与 JSON 正则配置的 `maxLength` 另设 Unicode 标量上限（1–8192），同时保留前述 UTF-16 上限；可行前缀必须能在该上限内完成。有限正则会推导容量，无界重复可通过较小的长度上限参与有限组合。组合规则另有更小的容量与解析预算，各构造器会明确拒绝超限配置。
+
+0.2.1 同时检查剩余标量与 UTF-16 容量，只有存在满足两种预算的完整续写时才接受未完成前缀；源文本和输入中的孤立代理项会被拒绝。涉及混合上限的续写分析最多访问 262144 个 NFA 状态步骤，耗尽时返回 `InvalidValue`，不进行无限搜索。
 
 ## 对报名反馈的对应修改
 

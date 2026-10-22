@@ -2,6 +2,8 @@
 
 MoonInput 0.2 将动态候选、正则、范围、枚举、函数校验与命名区块放进同一套可组合 MoonBit 模型。业务可定义并嵌套自己的规则，模型同时用于浏览器输入、无界面数据规范化和命令行回放。对初审反馈的逐项回应见 [升级说明](UPGRADE-0.2.md)，与 IMask 的具体能力和差异见 [功能对照](IMASK-COVERAGE.md)。
 
+0.2.1 进一步加固快照恢复与历史、嵌套规则更新、数值片段粘贴、日期数字后缀及正则续写边界。`Editor::restore` 与协议的可选 display 经过核心重新验证，保留明确的组合分区；错误快照与会改变完整数值／日期含义的规则更新会被拒绝。
+
 ## 直接体验
 
 打开 [在线演示](https://yeehh2004.github.io/mooninput/)：
@@ -30,7 +32,7 @@ Moonform 管理表单字段状态、验证时机和提交；MoonInput 负责字�
 | README 安装、使用与示例 | [README](../README.md) 的版本化安装命令、MoonBit 代码、浏览器和 CLI 步骤 |
 | CI 覆盖检查、构建、测试 | Linux/Windows 执行 moon check/build/test，另有接口、包内容及示例输出检查 |
 | 可运行样例 | [基础样例](../examples/basic)、[十类规则与回调](../examples/rules)、[独立消费者](../examples/consumer)、六类扩展示例及 JSON 工作台 |
-| 核心路径测试 | 90 项 MoonBit 测试、24 项 Node 测试与独立参考模型；每种浏览器引擎执行 36 项基础检查和 39 项扩展检查，见 [验证方法](VERIFICATION.md) |
+| 核心路径测试 | MoonBit 测试在 JS／Wasm GC 上执行，另有 Node 检查与独立参考模型；三种浏览器分别执行基础、扩展和验收回归脚本，实际数量与命名证据见 [验证方法](VERIFICATION.md) |
 | 发布 Mooncakes | [包与 API](https://mooncakes.io/docs/YeeHh2004/mooninput)；[公开安装工作流](../.github/workflows/registry.yml) 在两个系统实际下载、构建和运行 |
 | OSI 许可证与来源 | [MIT](../LICENSE)、[原创与参考说明](../NOTICE.md)、[标准库许可证](../licenses/MoonBit-core-LICENSE) |
 

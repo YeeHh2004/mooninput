@@ -31,15 +31,16 @@ npm install
 npx playwright install chromium firefox webkit
 node tests/browser.mjs
 node tests/advanced-browser.mjs
+node tests/acceptance-browser.mjs
 ```
 
-Linux CI installs all three engines with --with-deps. Set BROWSER_ENGINE=firefox or webkit to select another engine (default chromium). BROWSER_CHANNEL=msedge can use installed Edge with chromium; PLAYWRIGHT_MODULE can point to an already-installed ESM entry. Screenshots and assertion results include the engine name and go in ignored dist/ and CI artifacts.
+Linux CI installs all three engines with --with-deps and runs the base, advanced and acceptance scripts for each. Set BROWSER_ENGINE=firefox or webkit to select another engine (default chromium). BROWSER_CHANNEL=msedge can use installed Edge with chromium; PLAYWRIGHT_MODULE can point to an already-installed ESM entry. Screenshots and assertion results include the engine name and go in ignored dist/ and CI artifacts. Acceptance evidence is saved as dist/acceptance-ENGINE-results.json alongside browser-ENGINE-results.json and advanced-ENGINE-results.json.
 
 `node scripts/serve.mjs` binds 127.0.0.1:4173 (override PORT). Use HTTP, not file://. No backend is needed.
 
 ## Structure
 
-- Root .mbt: mask rules, parsing/rendering, editing, dates, decimals, reconciliation.
+- Root .mbt: mask rules, parsing/rendering, editing, dates, decimals, reconciliation and validated snapshot restoration.
 - protocol/: bounded JSON adapter in MoonBit; bridge/: JavaScript export entry.
 - web/: event adapter, three initial demos, six extensible-rule demos, ten JSON presets and editable configuration workbench.
 - cli/: Node IO host using the same engine.
@@ -54,4 +55,4 @@ Publish after CI passes for the current commit. Use the [official login/publish 
 
 After publication run `node scripts/check-consumer.mjs --registry` and dispatch registry.yml for Linux/Windows public installation. It uses no publication secret. Pages deploys only successful current-main CI artifacts; build-info.json records source SHA, compiler, version and engine SHA-256. Release archives include tracked source and precompiled site/CLI, checksums and licenses.
 
-From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.2.0.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding still requires the pinned compiler.
+From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.2.1.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding still requires the pinned compiler.

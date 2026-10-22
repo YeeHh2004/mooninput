@@ -26,12 +26,12 @@ jobs:
           core-version: '0.10.14+7d59c7ec9'
       - run: moon version --all
       - run: moon fmt --check
-      - run: moon check --target js
-      - run: moon check --target wasm-gc
+      - run: moon check --target js --deny-warn
+      - run: moon check --target wasm-gc --deny-warn
       - run: moon info
       - run: git diff --exit-code -- '*.mbti'
-      - run: moon test --target js
-      - run: moon test --target wasm-gc
+      - run: moon test --target js --deny-warn
+      - run: moon test --target wasm-gc --deny-warn
       - run: moon build --target wasm-gc
       - run: node scripts/build.mjs
       - run: node --test tests/*.test.mjs
@@ -54,10 +54,13 @@ jobs:
         run: |
           node tests/browser.mjs
           node tests/advanced-browser.mjs
+          node tests/acceptance-browser.mjs
           BROWSER_ENGINE=firefox node tests/browser.mjs
           BROWSER_ENGINE=firefox node tests/advanced-browser.mjs
+          BROWSER_ENGINE=firefox node tests/acceptance-browser.mjs
           BROWSER_ENGINE=webkit node tests/browser.mjs
           BROWSER_ENGINE=webkit node tests/advanced-browser.mjs
+          BROWSER_ENGINE=webkit node tests/acceptance-browser.mjs
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-24.04'
         with:
@@ -71,4 +74,5 @@ jobs:
             _build/core-coverage.xml
             dist/browser-*-results.json
             dist/advanced-*-results.json
+            dist/acceptance-*-results.json
             dist/browser-screenshots/

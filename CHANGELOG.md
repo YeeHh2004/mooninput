@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1
+
+- Add `Editor::restore(mask, raw, display, start, end)` with strict revalidation of snapshot text and selection. Optional display transport in the JSON protocol preserves explicitly formatted composite partitions across requests and browser history.
+- Make browser history track semantic state changes, validate restores before moving history entries, and retain existing state after failed programmatic updates. Failed native form resets also restore the selection captured before the browser's reset action. Protect complete canonical values during option changes involving numeric/date rules, including nested rules.
+- Normalize formatted numeric fragments before insertion/overwrite through validation/value/presentation wrappers, without clamping an isolated fragment against whole-field bounds. Keep whole-input preparation ordering and existing pattern overwrite counting. Keep date raw digits intact when a format has a numeric literal suffix.
+- Preserve the existing composite partition when replacement text produces the same raw content.
+- Preserve fully consumed editable composite results when the bounded search budget expires; impossible overflow still fails.
+- Enforce regex continuation feasibility against both scalar and UTF-16 limits, reject unpaired surrogates, and bound mixed-limit continuation analysis.
+- Add core, protocol, Node and browser acceptance regressions; CI runs the acceptance suite on Chromium, Firefox and WebKit and uploads separate results per engine. Scope remains a documented MoonBit implementation rather than an IMask compatibility claim.
+
 ## 0.2.0
 
 - Generalize the MoonBit engine with dynamic named candidates and dispatch, function masks, custom pattern tokens, validation/preparation/value hooks, named nested composite blocks, optional blocks, literals and finite repetition.
