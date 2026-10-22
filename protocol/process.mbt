@@ -54,6 +54,7 @@ priv struct TokenConfig {
 priv struct Request {
   config : Config
   value : String
+  display : String?
   op : String
   start : Int
   end : Int
@@ -459,7 +460,18 @@ pub fn process(text : String) -> String {
     Ok(mask) => mask
     Err(e) => return failure(e).stringify()
   }
-  let editor = match @input.Editor::new(mask, initial=request.value) {
+  let restored = match request.display {
+    Some(display) =>
+      @input.Editor::restore(
+        mask,
+        request.value,
+        display,
+        display.length(),
+        display.length(),
+      )
+    None => @input.Editor::new(mask, initial=request.value)
+  }
+  let editor = match restored {
     Ok(editor) => editor
     Err(e) => return failure(e).stringify()
   }
