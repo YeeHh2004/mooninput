@@ -67,3 +67,24 @@ test "independent consumer composes and dispatches public rules" {
   })
   assert_eq(@input.pipe(custom, "1234", unmask=true), Ok("1234"))
 }
+
+///|
+test "independent consumer restores semantic partitions and formatted numeric fragments" {
+  let mask = @input.composite([
+    @input.Block("head", @input.enumeration(["A", "AB"]).unwrap()),
+    @input.Literal(" "),
+    @input.Block("tail", @input.regex("[A-Z]{1,2}").unwrap()),
+  ]).unwrap()
+  let restored = @input.Editor::restore(mask, "ABC", "A BC", 2, 4).unwrap()
+  assert_eq(restored.fields()[0].value, "A")
+  assert_eq(restored.insert("DE").unwrap().value(), Ok("A DE"))
+  assert_true(@input.Editor::restore(mask, "ABC", "A DE", 2, 4) is Err(_))
+  let amount = @input.Editor::new(
+    @input.number(radix=',', group_separator=".").unwrap(),
+    initial="1234,50",
+  ).unwrap()
+  assert_eq(
+    amount.select(2, 3).unwrap().insert("5.678").unwrap().value(),
+    Ok("1567834.50"),
+  )
+}

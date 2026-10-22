@@ -345,12 +345,15 @@ pub fn with_validation(mask : Mask, validate : (String) -> Status) -> Mask {
       }
     },
     capacity=rules_capacity(mask).unwrap_or(8192),
+    fragment?=mask.fragment_normalizer(),
   )
 }
 
 ///|
 /// Normalize incoming text before the base mask parses it. The normalizer
 /// receives the whole proposed value, including edits and programmatic sets.
+/// Preparation deliberately does not inherit fragment parsing: the callback
+/// must be able to normalize incoming text before the base mask validates it.
 pub fn with_prepare(mask : Mask, prepare : (String) -> String) -> Mask {
   extension(
     fn(text) {
@@ -497,6 +500,9 @@ fn rules_composite_walk(
       while end >= input {
         budget.remaining -= 1
         if budget.remaining < 0 {
+          if fallback is Some(_) {
+            return Ok(fallback)
+          }
           return Err(
             InvalidValue("composite parsing exceeded its bounded search budget"),
           )
@@ -529,7 +535,16 @@ fn rules_composite_walk(
                   formatted,
                   budget,
                 ) {
-                Err(e) => return Err(e)
+                Err(e) => {
+                  // A fully consumed syntactic partition is still an editable
+                  // result when its values are semantically invalid. Do not
+                  // discard it merely because searching for a better partition
+                  // exhausted the shared budget.
+                  if budget.remaining < 0 && fallback is Some(_) {
+                    return Ok(fallback)
+                  }
+                  return Err(e)
+                }
                 Ok(None) => ()
                 Ok(Some(tail)) => {
                   let fields : Array[FieldValue] = []

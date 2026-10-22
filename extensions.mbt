@@ -53,8 +53,39 @@ fn text_render(
 fn extension(
   parse : (String) -> Result[Render, InputError],
   capacity? : Int = 8192,
+  fragment? : (String) -> Result[Array[Char], InputError],
 ) -> Mask {
-  { kind: ExtensionKind({ parse, capacity: Some(capacity), }), }
+  { kind: ExtensionKind({ parse, capacity: Some(capacity), fragment, }), }
+}
+
+///|
+fn Mask::fragment_normalizer(
+  self : Mask,
+) -> ((String) -> Result[Array[Char], InputError])? {
+  match self.kind {
+    ExtensionKind(e) => e.fragment
+    DecimalKind(precision, signed, grouped) =>
+      Some(text => {
+        match parse_decimal(text, precision, signed, grouped) {
+          Ok(render) => Ok(render.raw)
+          Err(e) => Err(e)
+        }
+      })
+    // Pattern fragments depend on the insertion slot. Absence retains the
+    // existing whole-value parsing path instead of inventing a start-zero rule.
+    _ => None
+  }
+}
+
+///|
+fn Mask::normalize_fragment(
+  self : Mask,
+  text : String,
+) -> Result[Array[Char], InputError] {
+  match self.fragment_normalizer() {
+    Some(normalize) => normalize(text)
+    None => Ok(text.to_array())
+  }
 }
 
 ///|

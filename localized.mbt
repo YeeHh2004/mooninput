@@ -96,7 +96,10 @@ pub fn number(
     return Err(InvalidConfig("invalid group separator"))
   }
   for c in map_radix {
-    if c.is_ascii_digit() || c == '-' || group_separator.contains_char(c) {
+    if !c.is_printable() ||
+      c.is_ascii_digit() ||
+      c == '-' ||
+      group_separator.contains_char(c) {
       return Err(
         InvalidConfig("radix mapping conflicts with grouping or digits"),
       )
@@ -127,7 +130,7 @@ pub fn number(
   if lower != "" && upper != "" && compare_decimal(lower, upper) > 0 {
     return Err(InvalidConfig("min exceeds max"))
   }
-  fn parse(text : String) -> Result[Render, InputError] {
+  fn parse(text : String, enforce_bounds : Bool) -> Result[Render, InputError] {
     if text.length() > 512 {
       return Err(TooLong(512))
     }
@@ -181,9 +184,13 @@ pub fn number(
       return Err(InvalidValue("malformed digit grouping"))
     }
     if state == Complete {
-      let outside = if lower != "" && compare_decimal(canonical, lower) < 0 {
+      let outside = if enforce_bounds &&
+        lower != "" &&
+        compare_decimal(canonical, lower) < 0 {
         Some(lower)
-      } else if upper != "" && compare_decimal(canonical, upper) > 0 {
+      } else if enforce_bounds &&
+        upper != "" &&
+        compare_decimal(canonical, upper) > 0 {
         Some(upper)
       } else {
         None
@@ -227,6 +234,9 @@ pub fn number(
         }
       }
     }
+    if enforce_bounds && state == Complete && canonical.length() > 256 {
+      return Err(TooLong(256))
+    }
     dot = raw.length()
     for i, c in raw {
       if c == '.' {
@@ -255,7 +265,14 @@ pub fn number(
       canonical: Some(canonical),
     })
   }
-  Ok(extension(parse, capacity=256))
+  Ok(
+    extension(text => parse(text, true), capacity=256, fragment=text => {
+      match parse(text, false) {
+        Ok(r) => Ok(r.raw)
+        Err(e) => Err(e)
+      }
+    }),
+  )
 }
 
 ///|
@@ -269,6 +286,11 @@ pub fn date(
     return Err(InvalidConfig("date format is too long"))
   }
   let chars = format.to_array()
+  for c in chars {
+    if !c.is_printable() {
+      return Err(InvalidConfig("date format literals must be printable"))
+    }
+  }
   let mut source = ""
   let mut last_source = ""
   let mut suffix = ""
@@ -336,17 +358,21 @@ pub fn date(
     return Err(InvalidConfig("date min exceeds max"))
   }
   fn parse(text : String) -> Result[Render, InputError] {
-    let chars = text.to_array()
-    let content = if suffix != "" && text.has_suffix(suffix) {
-      String::from_array(
-        chars[:chars.length() - suffix.to_array().length()].to_owned(),
-      )
-    } else {
-      text
-    }
-    let r = match base.render_input(content) {
+    let r = match base.render_input(text) {
       Ok(r) => r
-      Err(e) => return Err(e)
+      Err(original_error) => {
+        if suffix == "" || !text.has_suffix(suffix) {
+          return Err(original_error)
+        }
+        let chars = text.to_array()
+        let content = String::from_array(
+          chars[:chars.length() - suffix.to_array().length()].to_owned(),
+        )
+        match base.render_input(content) {
+          Ok(r) => r
+          Err(e) => return Err(e)
+        }
+      }
     }
     if r.raw.is_empty() {
       return Ok({ ..r, state: Some(Empty), })

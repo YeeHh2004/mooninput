@@ -478,14 +478,28 @@ fn RegexCompiler::compile(
 }
 
 ///|
-fn regex_remaining(states : Array[RegexInstruction]) -> Array[Int] {
+fn regex_min_units(ranges : Array[(Int, Int)]) -> Int {
+  if ranges[0].0 <= 0xFFFF {
+    1
+  } else {
+    2
+  }
+}
+
+///|
+fn regex_remaining(
+  states : Array[RegexInstruction],
+  utf16? : Bool = false,
+) -> Array[Int] {
   let parents : Array[Array[(Int, Int)]] = Array::makei(states.length(), _ => [])
   for index, state in states {
     match state {
       RegexAccept => ()
       RegexConsume(ranges, next) =>
         if !ranges.is_empty() {
-          parents[next].push((index, 1))
+          parents[next].push(
+            (index, if utf16 { regex_min_units(ranges) } else { 1 }),
+          )
         }
       RegexFork(left, right) => {
         parents[left].push((index, 0))
@@ -493,20 +507,21 @@ fn regex_remaining(states : Array[RegexInstruction]) -> Array[Int] {
       }
     }
   }
-  // Bucketed 0/1 shortest paths: consuming edges cost one scalar and epsilon
-  // edges cost zero. Every reachable minimum is at most the number of states.
+  // Bucketed shortest paths: epsilon edges cost zero, consuming edges cost one
+  // scalar or one/two UTF-16 units. Shortest paths never need a positive cycle.
   let remaining = Array::make(states.length(), 8193)
-  let buckets : Array[Array[Int]] = Array::makei(states.length() + 1, _ => [])
+  let limit = states.length() * (if utf16 { 2 } else { 1 })
+  let buckets : Array[Array[Int]] = Array::makei(limit + 1, _ => [])
   buckets[0].push(0)
   remaining[0] = 0
-  for distance in 0..<=states.length() {
+  for distance in 0..<=limit {
     let pending = buckets[distance]
     while !pending.is_empty() {
       let index = pending.pop().unwrap()
       if remaining[index] == distance {
         for (parent, cost) in parents[index] {
           let candidate = distance + cost
-          if candidate <= states.length() && candidate < remaining[parent] {
+          if candidate <= limit && candidate < remaining[parent] {
             remaining[parent] = candidate
             buckets[candidate].push(parent)
           }
@@ -602,10 +617,103 @@ fn regex_class_matches(ranges : Array[(Int, Int)], code : Int) -> Bool {
 }
 
 ///|
+// Two resource limits can prefer different branches: one may use fewer
+// scalars but more UTF-16 units. Resolve that rare case exactly, rather than
+// combining independent minima that need not describe the same continuation.
+// A shortest feasible continuation has no cycles, so at most states.length()
+// consumed scalars need exploration. Work is also capped at 262144 NFA visits.
+fn regex_joint_viable(
+  states : Array[RegexInstruction],
+  initial : Array[Int],
+  scalar_budget : Int,
+  unit_budget : Int,
+  remaining : Array[Int],
+  remaining_units : Array[Int],
+) -> Result[Bool, InputError] {
+  let mut seeds : Array[(Int, Int)] = initial.map(index => (0, index))
+  let mut work = 262144
+  let limit = scalar_budget.min(states.length())
+  for steps in 0..<=limit {
+    if seeds.is_empty() {
+      return Ok(false)
+    }
+    // All edges inside an epsilon closure have zero cost. Visiting seed costs
+    // in ascending order lets each state retain only its cheapest unit cost at
+    // this exact scalar count; more expensive paths cannot improve feasibility.
+    seeds.mut_view().sort_by((a, b) => a.0.compare(b.0))
+    let seen = Array::make(states.length(), false)
+    let frontier : Array[(Int, Int)] = []
+    for (cost, seed) in seeds {
+      let pending = [seed]
+      while !pending.is_empty() {
+        let index = pending.pop().unwrap()
+        if !seen[index] {
+          seen[index] = true
+          work -= 1
+          if work < 0 {
+            return Err(
+              InvalidValue(
+                "regex constrained-prefix analysis exceeded its bounded work budget",
+              ),
+            )
+          }
+          let scalar_need = remaining[index]
+          let unit_need = remaining_units[index]
+          if steps + scalar_need > scalar_budget ||
+            cost + unit_need > unit_budget {
+            continue
+          }
+          // Either minimum now provides a witness satisfying both bounds.
+          if cost + 2 * scalar_need <= unit_budget ||
+            steps + unit_need <= scalar_budget {
+            return Ok(true)
+          }
+          match states[index] {
+            RegexAccept => return Ok(true)
+            RegexConsume(_, _) => frontier.push((cost, index))
+            RegexFork(left, right) => {
+              pending.push(left)
+              pending.push(right)
+            }
+          }
+        }
+      }
+    }
+    if steps == limit {
+      break
+    }
+    let next : Array[(Int, Int)] = []
+    for (cost, index) in frontier {
+      work -= 1
+      if work < 0 {
+        return Err(
+          InvalidValue(
+            "regex constrained-prefix analysis exceeded its bounded work budget",
+          ),
+        )
+      }
+      match states[index] {
+        RegexConsume(ranges, target) =>
+          if !ranges.is_empty() {
+            let cost = cost + regex_min_units(ranges)
+            if cost <= unit_budget {
+              next.push((cost, target))
+            }
+          }
+        _ => ()
+      }
+    }
+    seeds = next
+  }
+  Ok(false)
+}
+
+///|
 fn regex_render(
   states : Array[RegexInstruction],
   start : Int,
   remaining : Array[Int],
+  remaining_units : Array[Int],
   max_length : Int,
   text : String,
 ) -> Result[Render, InputError] {
@@ -615,6 +723,12 @@ fn regex_render(
   let chars = text.to_array()
   if chars.length() > max_length {
     return Err(TooLong(max_length))
+  }
+  for c in chars {
+    let code = c.to_int()
+    if code >= 0xD800 && code <= 0xDFFF {
+      return Err(InvalidValue("input contains an unpaired UTF-16 surrogate"))
+    }
   }
   let mut active = regex_closure(states, [start])
   for c in chars {
@@ -635,12 +749,30 @@ fn regex_render(
   }
   let mut complete = false
   let mut viable = false
+  let candidates : Array[Int] = []
+  let scalar_budget = max_length - chars.length()
+  let unit_budget = 8192 - text.length()
   for index in active {
     if index == 0 {
       complete = true
     }
-    if chars.length() + remaining[index] <= max_length {
-      viable = true
+    let scalar_need = remaining[index]
+    let unit_need = remaining_units[index]
+    if scalar_need <= scalar_budget && unit_need <= unit_budget {
+      if 2 * scalar_need <= unit_budget || unit_need <= scalar_budget {
+        viable = true
+      } else {
+        candidates.push(index)
+      }
+    }
+  }
+  if !viable && !candidates.is_empty() {
+    viable = match
+      regex_joint_viable(
+        states, candidates, scalar_budget, unit_budget, remaining, remaining_units,
+      ) {
+      Ok(result) => result
+      Err(error) => return Err(error)
     }
   }
   if !viable {
@@ -667,6 +799,8 @@ fn regex_render(
 /// counts <= 256, compiled states <= 2048, editable input <= 8192 UTF-16 units.
 /// max_length optionally imposes a smaller scalar limit, including viable
 /// continuations; finite expressions expose their inferred scalar capacity.
+/// The UTF-16 ceiling also applies to continuations. Rare mixed-bound analysis
+/// is limited to 262144 NFA visits and reports InvalidValue if exhausted.
 pub fn regex(
   source : String,
   case_insensitive? : Bool = false,
@@ -681,6 +815,12 @@ pub fn regex(
     )
   }
   let chars = source.to_array()
+  for c in chars {
+    let code = c.to_int()
+    if code >= 0xD800 && code <= 0xDFFF {
+      return Err(InvalidPattern("source contains an unpaired UTF-16 surrogate"))
+    }
+  }
   let start = if !chars.is_empty() && chars[0] == '^' { 1 } else { 0 }
   let mut limit = chars.length()
   if limit > start && chars[limit - 1] == '$' {
@@ -718,6 +858,7 @@ pub fn regex(
   }
   let states = compiler.states
   let remaining = regex_remaining(states)
+  let remaining_units = regex_remaining(states, utf16=true)
   if remaining[start] == 8193 {
     return Err(InvalidPattern("regular expression accepts no possible input"))
   }
@@ -731,7 +872,11 @@ pub fn regex(
     .min(max_length)
   Ok(
     extension(
-      text => regex_render(states, start, remaining, max_length, text),
+      text => {
+        regex_render(
+          states, start, remaining, remaining_units, max_length, text,
+        )
+      },
       capacity~,
     ),
   )

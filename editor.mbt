@@ -155,7 +155,7 @@ fn Editor::replace_raw(
         Ok(render) => Ok(render.raw)
         Err(e) => Err(e)
       }
-    ExtensionKind(_) => Ok(text.to_array())
+    ExtensionKind(_) => self.mask.normalize_fragment(text)
   }
   let inserted = match inserted {
     Ok(chars) => chars
@@ -170,6 +170,14 @@ fn Editor::replace_raw(
   }
   for i in end..<self.render.raw.length() {
     raw.push(self.render.raw[i])
+  }
+  // Replacing a selection with identical editable text is not a request to
+  // repartition a composite. Preserve the validated render and only move the
+  // caret, just as a literal-only no-op preserves the existing snapshot.
+  if raw == self.render.raw {
+    let index = (start + inserted.length()).min(raw.length())
+    let caret = if index == 0 { 0 } else { self.render.ends[index - 1] }
+    return Ok({ ..self, selection: { start: caret, end: caret, }, })
   }
   let rendered = match self.mask.kind {
     PatternKind(p) | DateKind(p) =>
@@ -233,10 +241,18 @@ pub fn Editor::insert(
           Ok(r) => r.raw.length()
           Err(error) => return Err(error)
         }
-      ExtensionKind(_) =>
-        match self.mask.render_input(text) {
-          Ok(r) => r.raw.length()
-          Err(_) => text.to_array().length()
+      ExtensionKind(e) =>
+        match e.fragment {
+          Some(normalize) =>
+            match normalize(text) {
+              Ok(raw) => raw.length()
+              Err(e) => return Err(e)
+            }
+          None =>
+            match self.mask.render_input(text) {
+              Ok(r) => r.raw.length()
+              Err(_) => text.to_array().length()
+            }
         }
     }
     end = (start + count).min(self.render.raw.length())

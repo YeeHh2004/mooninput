@@ -52,6 +52,7 @@ priv enum Kind {
 priv struct Extension {
   parse : (String) -> Result[Render, InputError]
   capacity : Int?
+  fragment : ((String) -> Result[Array[Char], InputError])?
 }
 
 ///|

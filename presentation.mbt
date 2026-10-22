@@ -141,6 +141,7 @@ pub fn presentation(
         }
       },
       capacity~,
+      fragment?=mask.fragment_normalizer(),
     ),
   )
 }
@@ -173,6 +174,7 @@ pub fn with_value(mask : Mask, transform : (String) -> String) -> Mask {
       }
     },
     capacity=mask.capacity(),
+    fragment?=mask.fragment_normalizer(),
   )
 }
 
