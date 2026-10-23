@@ -382,6 +382,9 @@ priv struct RulesBudget {
 priv struct RulesPiece {
   render : Render
   complete : Bool
+  // Visibility and editable-content presence of the nearest following block.
+  // None distinguishes a pure literal suffix from an absent optional block.
+  first_block : (Bool, Bool)?
 }
 
 ///|
@@ -423,6 +426,33 @@ fn rules_join(head : Render, tail : Render) -> Render {
 }
 
 ///|
+fn rules_literal_piece(literal : String, tail : RulesPiece) -> RulesPiece {
+  let (show, submit) = tail.first_block.unwrap_or((true, true))
+  if !show {
+    return tail
+  }
+  let prefix = {
+    ..text_render("", Empty),
+    display: literal,
+    canonical: Some(if submit { literal } else { "" }),
+  }
+  let joined = rules_join(prefix, tail.render)
+  let state = if joined.raw.is_empty() {
+    Empty
+  } else {
+    match tail.render.state {
+      Some(Invalid(reason)) => Invalid(reason)
+      _ => if tail.complete { Complete } else { Incomplete }
+    }
+  }
+  {
+    render: { ..joined, state: Some(state), },
+    complete: tail.complete,
+    first_block: tail.first_block,
+  }
+}
+
+///|
 fn rules_composite_walk(
   parts : Array[MaskPart],
   chars : Array[Char],
@@ -431,6 +461,8 @@ fn rules_composite_walk(
   formatted : Bool,
   budget : RulesBudget,
 ) -> Result[RulesPiece?, InputError] {
+  // Every recursive branch, including literal-only paths, shares this budget.
+  // Block candidate parsing below consumes an additional step per candidate.
   budget.remaining -= 1
   if budget.remaining < 0 {
     return Err(
@@ -440,7 +472,11 @@ fn rules_composite_walk(
   if part == parts.length() {
     return Ok(
       if input == chars.length() {
-        Some({ render: text_render("", Empty), complete: true, })
+        Some({
+          render: text_render("", Empty),
+          complete: true,
+          first_block: None,
+        })
       } else {
         None
       },
@@ -449,44 +485,55 @@ fn rules_composite_walk(
   match parts[part] {
     Literal(literal) => {
       let units = literal.to_array()
-      let mut next = input
-      if formatted && input < chars.length() {
-        if !matches_at(chars, input, units) {
-          return Ok(None)
+      if !formatted || input == chars.length() {
+        return match
+          rules_composite_walk(parts, chars, part + 1, input, formatted, budget) {
+          Err(e) => Err(e)
+          Ok(None) => Ok(None)
+          Ok(Some(tail)) => Ok(Some(rules_literal_piece(literal, tail)))
         }
-        next += units.length()
+      }
+      if matches_at(chars, input, units) {
+        match
+          rules_composite_walk(
+            parts,
+            chars,
+            part + 1,
+            input + units.length(),
+            formatted,
+            budget,
+          ) {
+          Err(e) => return Err(e)
+          Ok(None) => ()
+          Ok(Some(tail)) => return Ok(Some(rules_literal_piece(literal, tail)))
+        }
+      }
+      // A separator before an absent optional block is absent from formatted
+      // input too, even if a later required block or a unit suffix is visible.
+      // Pure literal suffixes have no optional block to justify omission; do
+      // not explore every subset of a long sequence of identical literals.
+      let mut later_block = false
+      for index in (part + 1)..<parts.length() {
+        match parts[index] {
+          Literal(_) => ()
+          _ => {
+            later_block = true
+            break
+          }
+        }
+      }
+      if !later_block {
+        return Ok(None)
       }
       match
-        rules_composite_walk(parts, chars, part + 1, next, formatted, budget) {
+        rules_composite_walk(parts, chars, part + 1, input, formatted, budget) {
         Err(e) => Err(e)
-        Ok(None) => Ok(None)
         Ok(Some(tail)) =>
-          if tail.render.raw.is_empty() &&
-            tail.render.display == "" &&
-            part != parts.length() - 1 {
-            Ok(Some(tail))
-          } else {
-            let prefix = {
-              ..text_render("", Empty),
-              display: literal,
-              canonical: Some(literal),
-            }
-            let joined = rules_join(prefix, tail.render)
-            let state = if joined.raw.is_empty() {
-              Empty
-            } else {
-              match tail.render.state {
-                Some(Invalid(reason)) => Invalid(reason)
-                _ => if tail.complete { Complete } else { Incomplete }
-              }
-            }
-            Ok(
-              Some({
-                render: { ..joined, state: Some(state), },
-                complete: tail.complete,
-              }),
-            )
+          match tail.first_block {
+            Some((false, _)) => Ok(Some(tail))
+            _ => Ok(None)
           }
+        Ok(None) => Ok(None)
       }
     }
     Block(name, mask) | Optional(name, mask) => {
@@ -585,6 +632,9 @@ fn rules_composite_walk(
                   let piece = {
                     render: { ..render, state: Some(state), },
                     complete,
+                    first_block: Some(
+                      (child.display != "", !child.raw.is_empty()),
+                    ),
                   }
                   if complete {
                     return Ok(Some(piece))
@@ -641,9 +691,14 @@ pub fn composite(parts : Array[MaskPart]) -> Result[Mask, InputError] {
         literal_length += text.length()
       }
       Block(name, mask) | Optional(name, mask) => {
-        if name == "" || name.length() > 128 || names.contains(name) {
+        if name == "" ||
+          name.length() > 128 ||
+          names.contains(name) ||
+          name.contains_char('.') {
           return Err(
-            InvalidConfig("composite block names must be nonempty and distinct"),
+            InvalidConfig(
+              "composite block names must be nonempty, distinct and cannot contain '.' (reserved for nested field paths)",
+            ),
           )
         }
         names.push(name)

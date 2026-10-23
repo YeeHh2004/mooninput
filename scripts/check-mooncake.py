@@ -12,7 +12,8 @@ with zipfile.ZipFile(archive) as z:
                 'decimal.mbt', 'date.mbt', 'LICENSE', 'README.md', 'NOTICE.md',
                 'examples/basic/main.mbt', 'examples/rules/main.mbt', 'protocol/process.mbt', 'docs/BEHAVIOR.md',
                 'engine_rules.mbt', 'regex_mask.mbt', 'localized.mbt', 'presentation.mbt', 'snapshot.mbt',
-                'acceptance_core_test.mbt', 'acceptance_numeric_regex_test.mbt', 'docs/IMASK-COVERAGE.md'}
+                'acceptance_core_test.mbt', 'acceptance_numeric_regex_test.mbt',
+                'checkpoint_test.mbt', 'composite_boundaries_test.mbt', 'docs/IMASK-COVERAGE.md'}
     assert required <= names, f'Missing files: {required - names}'
     for name in names:
         p = Path(name)
