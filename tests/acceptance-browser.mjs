@@ -127,6 +127,82 @@ try{
   check('composite undo restores display partition and fields',{ok:partitionHistory.undone,...partitionHistory.undo},{ok:true,raw:'ABC',display:'A BC',fields:[{name:'head',value:'A'},{name:'tail',value:'BC'}]});
   check('failed composite edits retain explicit partition and selection',partitionHistory.afterError,{raw:'ABC',display:'A BC',start:2,end:4});
   check('failed composite edits retain the redo branch',{ok:partitionHistory.redone,...partitionHistory.redo},{ok:true,raw:'ABC',display:'AB C',fields:[{name:'head',value:'AB'},{name:'tail',value:'C'}]});
+  const resetWrites=await page.evaluate(async()=>{
+    const {bindInput}=await import('./adapter.mjs');
+    const cases=[];
+    for(const invalidDefault of [false,true]){
+      const form=document.createElement('form'),element=document.createElement('input');
+      element.defaultValue='12';form.append(element);document.body.append(form);
+      const binding=bindInput(element,{kind:'pattern',pattern:'##'});
+      binding.setValue('34');if(invalidDefault)element.defaultValue='bad';
+      form.reset();binding.setValue('56');await Promise.resolve();
+      cases.push({invalidDefault,raw:binding.state.raw,display:element.value});
+      binding.destroy();form.remove();
+    }
+    return cases;
+  });
+  for(const item of resetWrites)check(`later explicit write supersedes queued ${item.invalidDefault?'invalid':'valid'} reset`,item,{invalidDefault:item.invalidDefault,raw:'56',display:'56'});
+  const resetAuthorities=await page.evaluate(async()=>{
+    const {bindInput}=await import('./adapter.mjs');
+    const results=[];
+    for(const operation of ['handler-write','failed-write','explicit-reset','configure','undo','blur']){
+      const form=document.createElement('form'),element=document.createElement('input');
+      element.defaultValue='12';form.append(element);document.body.append(form);
+      const binding=bindInput(element,{kind:'pattern',pattern:'##'});
+      binding.setValue('34');
+      if(operation==='blur')element.focus();
+      if(operation==='handler-write')form.addEventListener('reset',()=>binding.setValue('56'),{once:true});
+      form.reset();
+      if(operation==='failed-write')binding.setValue('bad');
+      if(operation==='explicit-reset')binding.reset('78');
+      if(operation==='configure')binding.updateOptions({pattern:'#-#'});
+      if(operation==='undo')binding.undo();
+      if(operation==='blur')element.blur();
+      await Promise.resolve();
+      const result={operation,raw:binding.state.raw,display:element.value};
+      if(operation==='undo'){result.redo=binding.redo();result.redone=binding.state.raw;}
+      results.push(result);binding.destroy();form.remove();
+    }
+    return results;
+  });
+  check('a reset handler application write survives the later native default action',resetAuthorities[0],{operation:'handler-write',raw:'56',display:'56'});
+  check('a failed write does not supersede a valid pending reset',resetAuthorities[1],{operation:'failed-write',raw:'12',display:'12'});
+  check('an explicit reset supersedes an older native reset task',resetAuthorities[2],{operation:'explicit-reset',raw:'78',display:'78'});
+  check('a successful configuration change supersedes an older native reset task',resetAuthorities[3],{operation:'configure',raw:'34',display:'3-4'});
+  check('history navigation supersedes a queued reset without losing redo',resetAuthorities[4],{operation:'undo',raw:'12',display:'12',redo:true,redone:'34'});
+  check('automatic blur commit does not supersede an authorized native reset',resetAuthorities[5],{operation:'blur',raw:'12',display:'12'});
+  const lockedComposition=await page.evaluate(async()=>{
+    const {bindInput}=await import('./adapter.mjs');
+    const results=[];
+    for(const lock of ['readOnly','disabled']){
+      const element=document.createElement('input');element.value='12';document.body.append(element);element.focus();
+      const errors=[];let accepted=0;
+      const binding=bindInput(element,{kind:'pattern',pattern:'XXXX'},{onError:error=>errors.push(error.code),onAccept:()=>accepted++});
+      element.setSelectionRange(1,2);element.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+      element.value='1你';element.setSelectionRange(2,2);
+      element.dispatchEvent(new InputEvent('input',{bubbles:true,isComposing:true,data:'你'}));
+      element[lock]=true;element.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true,data:'你'}));
+      const rolledBack={raw:binding.state.raw,display:element.value,start:element.selectionStart,end:element.selectionEnd,accepted};
+      element[lock]=false;element.dispatchEvent(new InputEvent('beforeinput',{bubbles:true,cancelable:true,inputType:'insertText',data:'好'}));
+      results.push({lock,rolledBack,resumed:{raw:binding.state.raw,display:element.value},errors});
+      binding.destroy();element.remove();
+    }
+    return results;
+  });
+  for(const item of lockedComposition)check(`${item.lock} composition end restores the model and precomposition selection`,item,{lock:item.lock,rolledBack:{raw:'12',display:'12',start:1,end:2,accepted:0},resumed:{raw:'1好',display:'1好'},errors:[]});
+  const interruptedComposition=await page.evaluate(async()=>{
+    const {bindInput}=await import('./adapter.mjs');
+    const element=document.createElement('input');element.value='12';document.body.append(element);
+    const binding=bindInput(element,{kind:'pattern',pattern:'XXXX'});
+    element.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+    element.value='12你';element.setSelectionRange(3,3);
+    element.dispatchEvent(new InputEvent('input',{bubbles:true,isComposing:true,data:'你'}));
+    binding.setValue('34');
+    element.value='12你';element.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true,data:'你'}));
+    const result={raw:binding.state.raw,display:element.value};
+    binding.destroy();element.remove();return result;
+  });
+  check('a completed application write supersedes an older composition session',interruptedComposition,{raw:'34',display:'34'});
   check('lifecycle acceptance cases have no uncaught browser exceptions',exceptions,[]);
   await mkdir(new URL('../dist/',import.meta.url),{recursive:true});
   await writeFile(new URL(`../dist/acceptance-${engine}-results.json`,import.meta.url),JSON.stringify({engine,checks:checks.length,passed:checks,failures},null,2));

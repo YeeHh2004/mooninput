@@ -1,6 +1,6 @@
 import {process as processInput} from './mooninput.mjs';
 const attached=new WeakSet();
-const changed=(a,b)=>['raw','display','value','status','reason','active'].some(key=>a[key]!==b[key])||JSON.stringify(a.fields)!==JSON.stringify(b.fields);
+const changed=(a,b)=>['raw','display','value','status','reason','active','replay'].some(key=>a[key]!==b[key])||JSON.stringify(a.fields)!==JSON.stringify(b.fields);
 function serialize(value){return JSON.stringify(value,(_key,item)=>{
   if(typeof item==='bigint'||typeof item==='function'||typeof item==='symbol'||(typeof item==='number'&&!Number.isFinite(item)))throw new TypeError('Configuration and requests must contain finite JSON data');
   return item;
@@ -19,8 +19,8 @@ function semanticRule(config){
 export function createEditor(config, initial = '') {
   let settings = Object.freeze(structuredClone(config));
   let state;
-  function request(op, text='', start=state?.start??0, end=state?.end??start, value=state?.raw??initial, display=state?.display) {
-    try{return JSON.parse(processInput(serialize({config:settings,value,display,op,start,end,text})));}
+  function request(op, text='', start=state?.start??0, end=state?.end??start, value=state?.raw??initial, display=state?.display, replay=state?.replay) {
+    try{return JSON.parse(processInput(serialize({config:settings,value,display:display??undefined,replay:replay??undefined,op,start,end,text})));}
     catch(error){return {ok:false,code:'config',error:error.message};}
   }
   const first=request('init');
@@ -41,10 +41,10 @@ export function createEditor(config, initial = '') {
       return structuredClone(result);
     },
     restore(saved){
-      if(!saved||typeof saved!=='object'||typeof saved.raw!=='string'||(saved.display!==undefined&&typeof saved.display!=='string')||!Number.isInteger(saved.start)||!Number.isInteger(saved.end))return {ok:false,code:'config',error:'Invalid editor snapshot'};
-      const init=request('init','',0,0,saved.raw,saved.display??null);
+      if(!saved||typeof saved!=='object'||typeof saved.raw!=='string'||(saved.display!==undefined&&typeof saved.display!=='string')||(saved.replay!==undefined&&typeof saved.replay!=='string')||!Number.isInteger(saved.start)||!Number.isInteger(saved.end))return {ok:false,code:'config',error:'Invalid editor snapshot'};
+      const init=request('init','',0,0,saved.raw,saved.display??null,saved.replay??null);
       if (!init.ok) return init;
-      const result=request('select','',saved.start,saved.end,init.state.raw,init.state.display);
+      const result=request('select','',saved.start,saved.end,init.state.raw,init.state.display,init.state.replay??null);
       if (result.ok) state=result.state;
       return structuredClone(result);
     },
@@ -53,7 +53,10 @@ export function createEditor(config, initial = '') {
       let next,result;
       try{
         next=Object.freeze(structuredClone({...settings,...patch}));
-        result=JSON.parse(processInput(serialize({config:next,value:state.raw,op:'init',start:0,end:0,text:''})));
+        // Preserve explicit block boundaries and concealed state when the new
+        // configuration can still replay the exact current representation.
+        result=JSON.parse(processInput(serialize({config:next,value:state.raw,display:state.display,replay:state.replay,op:'select',start:state.start,end:state.end,text:''})));
+        if(!result.ok)result=JSON.parse(processInput(serialize({config:next,value:state.raw,op:'init',start:0,end:0,text:''})));
       }catch(error){return {ok:false,code:'config',error:error.message,state:snapshot()};}
       if(result.ok&&state.status==='complete'&&(semanticRule(settings)||semanticRule(next))&&result.state.value!==state.value){
         return {ok:false,code:'value',error:'These options reinterpret the current value. Clear or explicitly convert it before changing the format.',state:snapshot()};
@@ -75,6 +78,7 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
   attached.add(element);
   const listeners=[];
   let composing=false, disposed=false;
+  let revision=0,compositionSnapshot,compositionRevision=0;
   let past=[], future=[];
   let rendered;
   const readSelection=()=>({start:element.selectionStart??0,end:element.selectionEnd??0});
@@ -89,11 +93,12 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
     if(previous&&changed(previous,state))onAccept(state);
     if(previous&&state.status==='complete'&&(previous.status!=='complete'||previous.value!==state.value))onComplete(state);
   }
-  function transition(op,text='',selection=readSelection()) {
+  function transition(op,text='',selection=readSelection(),supersedeReset=true) {
     if (disposed) throw new Error('binding has been destroyed');
     const before=op==='reconcile'?editor.state:currentSnapshot();
     const result=editor.apply(op,text,selection.start,selection.end);
     if(!result.ok&&op==='set'){editor.restore(before);result.state=editor.state;}
+    if(result.ok&&supersedeReset)revision++;
     if (result.ok && changed(before,editor.state)) {
       past.push(before); if(past.length>historyLimit)past.shift(); future=[];
     }
@@ -110,7 +115,7 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
     if(!source.length)return false;
     const current=currentSnapshot(),result=editor.restore(source[source.length-1]);
     if(!result.ok){onError({code:result.code,message:result.error});return false;}
-    source.pop();destination.push(current);render();return true;
+    source.pop();destination.push(current);revision++;render();return true;
   }
   function undo(){
     return moveHistory(past,future);
@@ -120,9 +125,9 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
   }
   function resetTo(value,before){
     if(disposed)throw new Error('binding has been destroyed');
-    composing=false;
+    composing=false;compositionSnapshot=undefined;
     const result=editor.apply('set',value,0,0);
-    if(result.ok){past=[];future=[];}
+    if(result.ok){past=[];future=[];revision++;}
     else{editor.restore(before);result.state=editor.state;}
     render();
     if(!result.ok)onError({code:result.code,message:result.error});
@@ -130,7 +135,7 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
   }
   function reset(value=element.defaultValue){return resetTo(value,currentSnapshot());}
   function listen(name,fn,target=element,capture=false){target.addEventListener(name,fn,capture);listeners.push([target,name,fn,capture]);}
-  function destroy(){if(disposed)return;disposed=true;attached.delete(element);for(const [target,name,fn,capture]of listeners)target.removeEventListener(name,fn,capture);past=[];future=[];}
+  function destroy(){if(disposed)return;disposed=true;composing=false;compositionSnapshot=undefined;attached.delete(element);for(const [target,name,fn,capture]of listeners)target.removeEventListener(name,fn,capture);past=[];future=[];}
   try{
   // Reset is cancelable and fires before the browser restores default values.
   // Document capture also covers controls associated through the form attribute.
@@ -138,8 +143,17 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
     if(event.target!==element.form)return;
     // Capture selection before the browser replaces value and collapses the
     // native caret. An invalid default must restore the pre-reset selection.
-    const before=currentSnapshot();
-    queueMicrotask(()=>{if(!disposed&&!event.defaultPrevented)resetTo(element.defaultValue,before);});
+    const before=currentSnapshot(),scheduledRevision=revision;
+    queueMicrotask(()=>{
+      if(disposed||event.defaultPrevented)return;
+      if(revision!==scheduledRevision){
+        // A later successful application write supersedes this reset. The
+        // browser's default action may still have overwritten its DOM value.
+        if(element.value!==editor.state.display)render(true);
+        return;
+      }
+      resetTo(element.defaultValue,before);
+    });
   },element.ownerDocument,true);
   listen('beforeinput',event=>{
     if(!editable()||composing||event.isComposing||!event.cancelable)return;
@@ -167,13 +181,21 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
     if(element.value===editor.state.display)return;
     transition('reconcile',element.value);
   });
-  listen('compositionstart',()=>{if(editable())composing=true;});
+  listen('compositionstart',()=>{if(editable()){composing=true;compositionSnapshot=currentSnapshot();compositionRevision=revision;}});
   listen('compositionend',()=>{
     if(!composing)return;
     composing=false;
+    const before=compositionSnapshot;compositionSnapshot=undefined;
+    if(revision!==compositionRevision){render(true);return;}
     if(editable())transition('reconcile',element.value);
+    else{
+      if(before)editor.restore(before);
+      render(true);
+    }
   });
-  listen('blur',()=>{if(editable()&&!composing&&editor.state.status==='complete')transition('commit');});
+  // An automatic blur commit must not cancel a pending native reset. Explicit
+  // application writes still advance revision, including binding.commit().
+  listen('blur',()=>{if(editable()&&!composing&&editor.state.status==='complete')transition('commit','',readSelection(),false);});
   listen('keydown',event=>{
     if(!editable()||composing||event.isComposing||event.altKey||!(event.ctrlKey||event.metaKey))return;
     const key=event.key.toLowerCase();
@@ -195,7 +217,7 @@ export function bindInput(element, config, {onChange=()=>{},onAccept=()=>{},onCo
     updateOptions(patch){
       if(disposed)throw new Error('binding has been destroyed');
       const result=editor.updateOptions(patch);
-      if(result.ok){past=[];future=[];}
+      if(result.ok){past=[];future=[];revision++;}
       render();if(!result.ok)onError({code:result.code,message:result.error});return result;
     },
     reset,undo,redo,

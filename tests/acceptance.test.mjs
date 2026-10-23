@@ -131,3 +131,53 @@ test('external configuration mutation cannot change nested dynamic or composite 
   assert.equal(editor.apply('insert','DE').state.value,'A DE');
   assert.deepEqual(editor.state.fields,fields('A','DE'));
 });
+
+test('empty and editing policy option updates retain explicit composite partitions and selection',()=>{
+  const editor=createEditor(partitionConfig,'A BC');
+  editor.apply('select','',2,4);
+  const before=editor.state;
+  for(const patch of [{},{overwrite:true},{skipInvalid:true}]){
+    assert.equal(editor.updateOptions(patch).ok,true);
+    assert.deepEqual(editor.state,before,'an unchanged rule must preserve the exact raw/display partition');
+  }
+  assert.equal(editor.apply('insert','DE').state.display,'A DE');
+  assert.deepEqual(editor.state.fields,fields('A','DE'));
+});
+
+test('opaque replay preserves concealed composite partitions across requests restore and option updates',()=>{
+  const config={kind:'presentation',rule:partitionConfig,concealed:'*'};
+  const editor=createEditor(config,'A BC');
+  assert.deepEqual(editor.state.fields,fields('A','BC'));
+  assert.equal(typeof editor.state.replay,'string','concealed input needs a validated replay representation');
+  editor.apply('select','',2,4);
+  const before=editor.state;
+  assert.equal(editor.updateOptions({overwrite:true}).ok,true);
+  assert.deepEqual(editor.state,before);
+  assert.equal(editor.apply('insert','DE').ok,true);
+  assert.deepEqual(editor.state.fields,fields('A','DE'));
+  assert.equal(editor.restore(before).ok,true);
+  assert.deepEqual(editor.state,before);
+  const replay=createEditor(config);
+  assert.equal(replay.restore(before).ok,true);
+  assert.deepEqual(replay.state,before);
+  const damaged={...structuredClone(before),replay:'AB C'};
+  assert.equal(replay.restore(damaged).ok,false);
+  assert.deepEqual(replay.state,before,'replay text must still match the saved raw/display pair');
+});
+
+test('restore validates replay types and remains compatible with replay-free legacy snapshots',()=>{
+  const editor=createEditor({kind:'pattern',pattern:'##-##'},'1234');
+  editor.apply('select','',1,4);
+  const before=editor.state;
+  for(const replay of [null,1,true,{},[],()=>true]){
+    assert.equal(editor.restore({...before,replay}).ok,false);
+    assert.deepEqual(editor.state,before);
+  }
+  const legacy={...before};delete legacy.replay;
+  assert.equal(editor.apply('set','5678').ok,true);
+  assert.equal(editor.restore(legacy).ok,true);
+  assert.equal(editor.state.raw,'1234');
+  assert.equal(editor.state.display,'12-34');
+  assert.equal(editor.state.start,1);
+  assert.equal(editor.state.end,4);
+});
