@@ -18,7 +18,7 @@ ISO date input uses `####-##-##`, with complete-value Gregorian calendar validat
 
 The adapter handles beforeinput, paste, selection, composition and fallback input events. It defers normalization until composition ends. Its local edit history supports browser undo/redo for intercepted edits. The pure core is usable without this adapter.
 
-The protocol may transport previous display alongside raw content. Editor::restore revalidates a raw candidate first, then a formatted candidate, and accepts only an exact raw/display pair with valid selection. This preserves explicitly formatted composite boundaries across stateless calls and history restores. Derived status, canonical values and fields always come from the core; raw-only reconstruction can still choose another valid partition of ambiguous variable-width blocks.
+The protocol transports previous replay text and display alongside raw content. The replay text is the input that actually produced an immutable editor, so it can reconstruct hidden, ambiguous block boundaries without inventing an inverse for display or canonical text. Editor::restore reparses it and accepts only an exact raw/display pair with valid selection. Old snapshots without replay retain raw-then-display reconstruction. Derived status, canonical values and fields always come from the core. A successful later edit advances the browser operation revision, so deferred resets and older composition sessions cannot overwrite newer model state.
 
 Core targets: JavaScript and Wasm GC. Browser adapter target: JavaScript. No claims of native widgets, all mobile IMEs, universal telephone validation or full locale-number parsing.
 

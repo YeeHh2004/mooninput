@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- Add validated replay text to immutable snapshots and the backward-compatible JSON boundary, so concealed variable-width composite partitions remain editable and recoverable. Equivalent native/browser rule updates preserve compatible snapshots and selections.
+- Prevent deferred form resets from overwriting later successful writes. End a composition consistently when a control becomes read-only/disabled or a newer programmatic update supersedes it.
+- Omit separators belonging to absent optional blocks from canonical text, including composites with unit suffixes; omit them from display unless needed for a visible placeholder layout. Reserve dots in declared block names for generated nested paths, preventing colliding field identities.
+- Add focused native, protocol, consumer and browser regressions while retaining the documented IMask scope and pinned dual-target toolchain.
+
 ## 0.2.1
 
 - Add `Editor::restore(mask, raw, display, start, end)` with strict revalidation of snapshot text and selection. Optional display transport in the JSON protocol preserves explicitly formatted composite partitions across requests and browser history.

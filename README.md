@@ -11,6 +11,8 @@
 
 0.2.1 加固了实际接入路径：快照恢复会同时验证 raw、display 与选区，协议携带可选显示文本以保留组合分区；数值片段粘贴、日期数字后缀、深层规则更新与正则 UTF-16 续写限制均有回归检查。详见 [更新记录](CHANGELOG.md)。
 
+0.2.2 进一步覆盖隐藏显示与变长区块的组合：快照带有经过验证的重放文本，等价规则更新保留原分区；表单重置不会覆盖之后的成功写入，组合输入结束时的只读／禁用切换也会保持显示与模型一致。
+
 ## 可以解决什么问题
 
 - **多规格标识与批量录入：** 动态选择短码／长码，以自定义字符定义、命名区块和有限重复表达业务格式。
@@ -25,7 +27,7 @@
 可复现基线：MoonBit compiler/core **`0.10.14+7d59c7ec9`**，支持 **JS、Wasm GC**。使用 `moon version --all` 核对版本，固定工具链步骤见[开发说明](docs/DEVELOPMENT.md)。
 
 ```sh
-moon add YeeHh2004/mooninput@0.2.1
+moon add YeeHh2004/mooninput@0.2.2
 ```
 
 在 `moon.pkg` 中导入：
@@ -191,7 +193,7 @@ node scripts/check-examples.mjs
 python scripts/check-mooncake.py
 ```
 
-[CI](.github/workflows/ci.yml) 在 Linux／Windows 执行检查、构建和测试，验证独立消费者、两个后端的示例输出与发布包内容。110 项 MoonBit 测试在 JS／Wasm GC 上覆盖动态切换、自定义校验、组合／可选／重复、严格快照恢复、正则前缀与边界、精确数值、日期、显示映射及错误恢复；另有 30 项 Node 测试，含 12,000 次随机编辑模型对照、1,000 组小数往返和 4,800 个日期样本。
+[CI](.github/workflows/ci.yml) 在 Linux／Windows 执行检查、构建和测试，验证独立消费者、两个后端的示例输出与发布包内容。125 项 MoonBit 测试在 JS／Wasm GC 上覆盖动态切换、自定义校验、组合／可选／重复、严格快照恢复、正则前缀与边界、精确数值、日期、显示映射及错误恢复；另有 33 项 Node 测试，含 12,000 次随机编辑模型对照、1,000 组小数往返和 4,800 个日期样本。
 
 浏览器测试需要额外开发依赖；运行下列命令验证 Chromium，将环境变量 `BROWSER_ENGINE` 设为 `firefox` 或 `webkit` 可选择其他引擎：
 
@@ -203,7 +205,7 @@ node tests/advanced-browser.mjs
 node tests/acceptance-browser.mjs
 ```
 
-三个浏览器脚本共 91 项检查（基础 36、扩展 39、验收回归 16），CI 在三个引擎分别执行。[验证说明](docs/VERIFICATION.md) 记录复现方式；实际通过数量与证据以 [Actions](https://github.com/YeeHh2004/mooninput/actions) 对应提交为准。合成输入法事件和三种浏览器引擎测试不代表所有实体手机、输入法或辅助技术均已验证。
+三个浏览器脚本共 102 项检查（基础 36、扩展 39、验收回归 27），CI 在三个引擎分别执行。[验证说明](docs/VERIFICATION.md) 记录复现方式；实际通过数量与证据以 [Actions](https://github.com/YeeHh2004/mooninput/actions) 对应提交为准。合成输入法事件和三种浏览器引擎测试不代表所有实体手机、输入法或辅助技术均已验证。
 
 Mooncakes 分发 MoonBit 核心、协议包、测试、文档和可运行样例；网页、CLI 和开发工具在 GitHub。`node scripts/check-consumer.mjs --registry` 从公共注册表安装，核对源码并在 JS／Wasm GC 上构建运行。发行包与公开包的验证入口见[验收导航](docs/REVIEW.md)。
 
