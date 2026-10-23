@@ -55,6 +55,7 @@ priv struct Request {
   config : Config
   value : String
   display : String?
+  replay : String?
   op : String
   start : Int
   end : Int
@@ -402,6 +403,7 @@ fn snapshot(editor : @input.Editor) -> Json {
   {
     "raw": editor.raw(),
     "display": editor.display(),
+    "replay": editor.replay_text(),
     "start": editor.selection().start,
     "end": editor.selection().end,
     "status": status,
@@ -425,6 +427,7 @@ fn failure(error : @input.InputError) -> Json {
 ///|
 /// Stateless, bounded JSON boundary used by the browser and CLI. Required
 /// request fields: config, value, op, start, end, text. Value is previous raw text.
+/// Optional display/replay restore an exact, revalidated snapshot.
 pub fn process(text : String) -> String {
   if text.length() > 65536 {
     return failure(@input.TooLong(65536)).stringify()
@@ -468,8 +471,14 @@ pub fn process(text : String) -> String {
         display,
         display.length(),
         display.length(),
+        replay?=request.replay,
       )
-    None => @input.Editor::new(mask, initial=request.value)
+    None =>
+      if request.replay is Some(_) {
+        Err(@input.InvalidConfig("snapshot replay requires display"))
+      } else {
+        @input.Editor::new(mask, initial=request.value)
+      }
   }
   let editor = match restored {
     Ok(editor) => editor

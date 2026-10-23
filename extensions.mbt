@@ -91,7 +91,12 @@ fn Mask::normalize_fragment(
 ///|
 fn enrich_render(render : Render, mask : Mask) -> Render {
   let end = render.display.length()
-  let editor : Editor = { mask, render, selection: { start: end, end, }, }
+  let editor : Editor = {
+    mask,
+    render,
+    selection: { start: end, end, },
+    replay: String::from_array(render.raw),
+  }
   {
     ..render,
     state: Some(editor.status()),
@@ -133,11 +138,24 @@ pub fn Editor::fields(self : Editor) -> Array[FieldValue] {
 }
 
 ///|
-/// Change rules atomically. The previous raw value is revalidated by the new mask.
+/// Change rules atomically. An unchanged interpretation preserves the replayed
+/// snapshot; otherwise revalidate the old raw value and map its selection.
 pub fn Editor::with_mask(
   self : Editor,
   mask : Mask,
 ) -> Result[Editor, InputError] {
+  match
+    Editor::restore(
+      mask,
+      self.raw(),
+      self.display(),
+      self.selection.start,
+      self.selection.end,
+      replay=self.replay_text(),
+    ) {
+    Ok(next) => return Ok(next)
+    Err(_) => ()
+  }
   let from = self.raw_index(self.selection.start).unwrap()
   let to = self.raw_index(self.selection.end).unwrap()
   match Editor::new(mask, initial=self.raw()) {

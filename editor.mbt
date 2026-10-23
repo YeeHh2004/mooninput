@@ -27,7 +27,7 @@ pub fn Editor::new(
     Err(e) => Err(e)
     Ok(render) => {
       let end = render.display.length()
-      Ok({ mask, render, selection: { start: end, end, }, })
+      Ok({ mask, render, selection: { start: end, end, }, replay: initial, })
     }
   }
 }
@@ -41,6 +41,14 @@ pub fn Editor::display(self : Editor) -> String {
 /// Unformatted editable content; numeric input is kept as an exact string.
 pub fn Editor::raw(self : Editor) -> String {
   String::from_array(self.render.raw)
+}
+
+///|
+/// Original parse input for this snapshot. Preserve it alongside raw/display
+/// when restoring rules whose preparation or hidden formatting is ambiguous.
+/// This is editable input, not a canonical value or a serialization of rules.
+pub fn Editor::replay_text(self : Editor) -> String {
+  self.replay
 }
 
 ///|
@@ -179,6 +187,7 @@ fn Editor::replace_raw(
     let caret = if index == 0 { 0 } else { self.render.ends[index - 1] }
     return Ok({ ..self, selection: { start: caret, end: caret, }, })
   }
+  let replay = String::from_array(raw)
   let rendered = match self.mask.kind {
     PatternKind(p) | DateKind(p) =>
       match parse_raw(p, raw, 0) {
@@ -187,7 +196,7 @@ fn Editor::replace_raw(
       }
     DecimalKind(precision, signed, grouped) =>
       render_decimal(raw, precision, signed, grouped)
-    ExtensionKind(_) => self.mask.render_input(String::from_array(raw))
+    ExtensionKind(_) => self.mask.render_input(replay)
   }
   match rendered {
     Err(e) => Err(e)
@@ -201,7 +210,12 @@ fn Editor::replace_raw(
       }
       let index = (start + inserted_length).min(render.raw.length())
       let caret = if index == 0 { 0 } else { render.ends[index - 1] }
-      Ok({ mask: self.mask, render, selection: { start: caret, end: caret, }, })
+      Ok({
+        mask: self.mask,
+        render,
+        selection: { start: caret, end: caret, },
+        replay,
+      })
     }
   }
 }

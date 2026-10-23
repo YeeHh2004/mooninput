@@ -88,3 +88,32 @@ test "independent consumer restores semantic partitions and formatted numeric fr
     Ok("1567834.50"),
   )
 }
+
+///|
+test "independent consumer replays hidden composite snapshots" {
+  let mask = @input.composite([
+    @input.Block(
+      "head",
+      @input.presentation(
+        @input.enumeration(["A", "AB"]).unwrap(),
+        placeholder='_',
+        concealed='*',
+      ).unwrap(),
+    ),
+    @input.Literal(" "),
+    @input.Block("tail", @input.regex("[A-Z]{1,2}").unwrap()),
+  ]).unwrap()
+  let original = @input.Editor::new(mask, initial="A BC").unwrap()
+  let restored = @input.Editor::restore(
+    mask,
+    original.raw(),
+    original.display(),
+    3,
+    5,
+    replay=original.replay_text(),
+  ).unwrap()
+  assert_eq(restored.display(), "*_ BC")
+  assert_eq(restored.fields()[0].value, "A")
+  assert_eq(restored.insert("DE").unwrap().value(), Ok("A DE"))
+  assert_eq(restored.with_mask(mask).unwrap().fields(), original.fields())
+}

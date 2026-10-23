@@ -94,6 +94,7 @@ pub struct Editor {
   priv mask : Mask
   priv render : Render
   priv selection : Selection
+  priv replay : String
 }
 
 ///|

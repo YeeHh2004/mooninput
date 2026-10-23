@@ -64,7 +64,8 @@ pub fn Editor::new(Mask, initial? : String) -> Result[Self, InputError]
 pub fn Editor::raw(Self) -> String
 pub fn Editor::raw_index(Self, Int) -> Result[Int, InputError]
 pub fn Editor::reconcile(Self, String, Int, Int) -> Result[Self, InputError]
-pub fn Editor::restore(Mask, String, String, Int, Int) -> Result[Self, InputError]
+pub fn Editor::replay_text(Self) -> String
+pub fn Editor::restore(Mask, String, String, Int, Int, replay? : String) -> Result[Self, InputError]
 pub fn Editor::select(Self, Int, Int) -> Result[Self, InputError]
 pub fn Editor::selection(Self) -> Selection
 pub fn Editor::set_value(Self, String) -> Result[Self, InputError]
