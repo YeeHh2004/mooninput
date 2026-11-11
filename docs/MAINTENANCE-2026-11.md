@@ -1,6 +1,6 @@
 # 2026-11-11 工具链维护记录
 
-本次维护针对 0.2.3 候选版本，只修复官方工具链更新造成的兼容问题，保留现有输入规则和 JS／Wasm GC 两个声明后端。本文记录本地复现结果；GitHub Actions、注册表发布和 Release 的状态须查看对应提交的实际运行结果。
+本次维护已于 2026-11-11 作为 **0.2.3** 发布至 [Mooncakes](https://mooncakes.io/docs/YeeHh2004/mooninput) 和 [GitHub Release](https://github.com/YeeHh2004/mooninput/releases/tag/v0.2.3)，修复官方工具链更新造成的兼容问题，保留现有输入规则和 JS／Wasm GC 两个声明后端。发布源码为 [`fe0816c2363feefdc2758f59135f97ab08bc0ea3`](https://github.com/YeeHh2004/mooninput/commit/fe0816c2363feefdc2758f59135f97ab08bc0ea3)。本文分别记录本地复现、公开 CI 和发布后安装验证结果。
 
 ## 实际环境
 
@@ -31,18 +31,40 @@ Feature flags enabled: rr_moon_mod,rr_moon_pkg
 | `moon check --target js --deny-warn` | 通过 |
 | `moon check --target wasm-gc --deny-warn` | 通过 |
 | `moon info` | 通过，公共接口已更新 |
-| `moon test --target js --deny-warn` | 125／125 |
-| `moon test --target wasm-gc --deny-warn` | 125／125 |
+| `moon test --target js --deny-warn` | 库测试 125／125 |
+| `moon test --target wasm-gc --deny-warn` | 库测试 125／125 |
 | `moon build --target wasm-gc` | 通过 |
 | `node scripts/build.mjs` | JS release 构建通过，记录实际 `0.10.20+65efd5b93` |
 | `node --test tests/*.test.mjs` | 33／33，含 12,000 次编辑模型对照、1,000 个精确小数和 4,800 个日期样本 |
 | `node scripts/check-examples.mjs` | basic／rules 在两个后端的输出均相符 |
 | `node scripts/check-consumer.mjs` | 独立 workspace consumer 两后端各 130／130（125 项库测试和 5 项 consumer 测试），运行输出相符 |
-| `python scripts/check-mooncake.py` | 实际待发布 ZIP 检查通过，未上传 |
+| `python scripts/check-mooncake.py` | 发布前实际 0.2.3 ZIP 内容检查通过 |
 | Chromium 三套浏览器脚本 | 基础 36／36、扩展 39／39、生命周期验收 27／27，共 102 项 |
 | 核心覆盖统计 | 编译器插桩点 1727／1833；这是插桩覆盖率，不代表完整语义覆盖 |
 
-本次本地没有重复安装 Firefox／WebKit，也没有将本地 Windows 结果表述为 Linux 结果。主 CI 仍在 Linux／Windows 检查两个后端，并在 Linux 分别运行 Chromium、Firefox、WebKit；这些结果以新提交的 Actions 为准。`--registry` 消费者检查须在 0.2.3 实际发布后执行，本文不声称已发布或已通过新版本公共安装。
+本地浏览器结果来自 Chromium；Linux、Firefox 和 WebKit 的结果由下面的公开 CI 独立提供。
+
+## 发布与公开验证
+
+以下运行均对应发布源码 `fe0816c2363feefdc2758f59135f97ab08bc0ea3`，并已于 2026-11-11 完成。
+
+| 证据 | 最终结果 |
+| --- | --- |
+| [固定工具链主 CI · 43000282321](https://github.com/YeeHh2004/mooninput/actions/runs/43000282321) | success；Linux／Windows 检查、构建、测试与 consumer／示例验证通过；Linux 的 Chromium、Firefox、WebKit 三套浏览器检查通过 |
+| [官方 latest 兼容 CI · 43000673708](https://github.com/YeeHh2004/mooninput/actions/runs/43000673708) | success；本次 latest compiler/core 为 `0.10.20+65efd5b93`，Linux／Windows 两后端、Node、示例与独立 consumer 通过 |
+| [公开注册表安装 CI · 43000960434](https://github.com/YeeHh2004/mooninput/actions/runs/43000960434) | success；Linux／Windows 从 Mooncakes 安装 `YeeHh2004/mooninput@0.2.3`，核对发布源码；各系统的 JS／Wasm GC 均为 **consumer 测试 5／5**，运行输出相符 |
+| [Pages 部署 · 43000588587](https://github.com/YeeHh2004/mooninput/actions/runs/43000588587) | success；[在线示例](https://yeehh2004.github.io/mooninput/) 已部署 0.2.3 |
+| [GitHub Release v0.2.3](https://github.com/YeeHh2004/mooninput/releases/tag/v0.2.3) | 正式发布，关联上述源码提交 |
+
+发布后的本地公开下载检查也在 JS／Wasm GC 各通过 5 项 consumer 测试。这里的 **5 项**只计独立 consumer；前面 workspace 模式的 **130 项**包含库测试 125 项与 consumer 5 项，不能将公开安装结果记为额外执行了 125 项库测试。
+
+发布时已核对[线上 build-info.json](https://yeehh2004.github.io/mooninput/build-info.json)：版本 `0.2.3`、compiler/core `0.10.20+65efd5b93`、源码提交与上述发布一致；引擎 SHA-256 为 `c6481e338830e97af39dd9489cc18cc72919006e129464065e40252a44ffad16`。这是发布时的验证快照；后续 main 提交通过 CI 后，在线示例会随之更新其 `sourceCommit`。
+
+公共安装命令：
+
+```sh
+moon add YeeHh2004/mooninput@0.2.3
+```
 
 ## 持续检查
 
