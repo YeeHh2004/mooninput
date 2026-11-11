@@ -2,7 +2,7 @@
 
 ## Toolchain
 
-Baseline: MoonBit compiler/core `0.10.14+7d59c7ec9`, Node.js 22+. Exact automated installation is in [ci.yml](../.github/workflows/ci.yml), with pinned hustcer/setup-moonbit. General installation: [MoonBit toolchain](https://docs.moonbitlang.com/en/stable/toolchain/index.html). Check `moon version --all`; build.mjs refuses other compiler versions. For a separate installation, set MOON_HOME to its directory and prepend its bin to PATH.
+Maintenance baseline (2026-11-11): MoonBit compiler/core `0.10.20+65efd5b93`, Node.js 22+. Exact automated installation is in [ci.yml](../.github/workflows/ci.yml), with pinned hustcer/setup-moonbit. General installation: [MoonBit toolchain](https://docs.moonbitlang.com/en/stable/toolchain/index.html). Check `moon version --all`. The main and registry workflows pin this verified version; [compatibility.yml](../.github/workflows/compatibility.yml) checks the official latest compiler/core weekly and on demand. The build script accepts newer toolchains and records their actual compiler, core and full Moon version output in build-info.json. A successful build alone does not establish compatibility: run the checks below. For a separate installation, set MOON_HOME to its directory and prepend its bin to PATH.
 
 No npm runtime dependency is needed. npm install adds only the pinned browser-test tool. Core imports only the MoonBit standard library.
 
@@ -55,4 +55,4 @@ Publish after CI passes for the current commit. Use the [official login/publish 
 
 After publication run `node scripts/check-consumer.mjs --registry` and dispatch registry.yml for Linux/Windows public installation. It uses no publication secret. Pages deploys only successful current-main CI artifacts; build-info.json records source SHA, compiler, version and engine SHA-256. Release archives include tracked source and precompiled site/CLI, checksums and licenses.
 
-From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.2.2.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding still requires the pinned compiler.
+From a clean committed checkout, run `node scripts/build.mjs` then `python scripts/release.py`. The script checks the source revision and engine hash, and writes `dist/mooninput-0.2.3.zip` and `dist/SHA256SUMS.txt`. Archive entries have fixed timestamps. Extract it and use `node scripts/serve.mjs` or the CLI without installing MoonBit. Rebuilding requires MoonBit; use the verified baseline for release reproduction. Generated distributions take NOTICE and LICENSE from the active toolchain core (MOON_HOME/lib/core), while licenses/ retains the baseline copies.

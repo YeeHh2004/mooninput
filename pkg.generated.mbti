@@ -8,11 +8,11 @@ import {
 // Values
 pub fn composite(Array[MaskPart]) -> Result[Mask, InputError]
 
-pub fn custom((String) -> Status, max_length? : Int, prepare? : (String) -> String) -> Result[Mask, InputError]
+pub fn custom((String) -> Status, max_length? : Int32, prepare? : (String) -> String) -> Result[Mask, InputError]
 
 pub fn date(format? : String, min? : String, max? : String) -> Result[Mask, InputError]
 
-pub fn decimal(precision? : Int, signed? : Bool, grouped? : Bool) -> Result[Mask, InputError]
+pub fn decimal(precision? : Int32, signed? : Bool, grouped? : Bool) -> Result[Mask, InputError]
 
 pub fn definition(Char, (Char) -> Bool, normalize? : (Char) -> Char) -> Definition
 
@@ -22,7 +22,7 @@ pub fn enumeration(Array[String], case_sensitive? : Bool) -> Result[Mask, InputE
 
 pub fn iso_date() -> Mask
 
-pub fn number(precision? : Int, signed? : Bool, radix? : Char, group_separator? : String, map_radix? : String, min? : String, max? : String, pad_fraction? : Bool, normalize_zeros? : Bool, autofix? : Bool) -> Result[Mask, InputError]
+pub fn number(precision? : Int32, signed? : Bool, radix? : Char, group_separator? : String, map_radix? : String, min? : String, max? : String, pad_fraction? : Bool, normalize_zeros? : Bool, autofix? : Bool) -> Result[Mask, InputError]
 
 pub fn pattern(String, definitions? : Array[Definition]) -> Result[Mask, InputError]
 
@@ -30,11 +30,11 @@ pub fn pipe(Mask, String, unmask? : Bool) -> Result[String, InputError]
 
 pub fn presentation(Mask, placeholder? : Char, concealed? : Char, eager? : Bool) -> Result[Mask, InputError]
 
-pub fn range(Int, Int, width? : Int, autofix? : Bool) -> Result[Mask, InputError]
+pub fn range(Int32, Int32, width? : Int32, autofix? : Bool) -> Result[Mask, InputError]
 
-pub fn regex(String, case_insensitive? : Bool, max_length? : Int) -> Result[Mask, InputError]
+pub fn regex(String, case_insensitive? : Bool, max_length? : Int32) -> Result[Mask, InputError]
 
-pub fn repeat(Mask, Int, Int) -> Result[Mask, InputError]
+pub fn repeat(Mask, Int32, Int32) -> Result[Mask, InputError]
 
 pub fn with_prepare(Mask, (String) -> String) -> Mask
 
@@ -57,38 +57,40 @@ pub fn Editor::backspace(Self) -> Result[Self, InputError]
 pub fn Editor::commit(Self, (String) -> String) -> Result[Self, InputError]
 pub fn Editor::delete_forward(Self) -> Result[Self, InputError]
 pub fn Editor::display(Self) -> String
-pub fn Editor::display_offset(Self, Int) -> Result[Int, InputError]
+pub fn Editor::display_offset(Self, Int32) -> Result[Int32, InputError]
 pub fn Editor::fields(Self) -> Array[FieldValue]
 pub fn Editor::insert(Self, String, overwrite? : Bool, skip_invalid? : Bool) -> Result[Self, InputError]
 pub fn Editor::new(Mask, initial? : String) -> Result[Self, InputError]
 pub fn Editor::raw(Self) -> String
-pub fn Editor::raw_index(Self, Int) -> Result[Int, InputError]
-pub fn Editor::reconcile(Self, String, Int, Int) -> Result[Self, InputError]
+pub fn Editor::raw_index(Self, Int32) -> Result[Int32, InputError]
+pub fn Editor::reconcile(Self, String, Int32, Int32) -> Result[Self, InputError]
 pub fn Editor::replay_text(Self) -> String
-pub fn Editor::restore(Mask, String, String, Int, Int, replay? : String) -> Result[Self, InputError]
-pub fn Editor::select(Self, Int, Int) -> Result[Self, InputError]
+pub fn Editor::restore(Mask, String, String, Int32, Int32, replay? : String) -> Result[Self, InputError]
+pub fn Editor::select(Self, Int32, Int32) -> Result[Self, InputError]
 pub fn Editor::selection(Self) -> Selection
 pub fn Editor::set_value(Self, String) -> Result[Self, InputError]
 pub fn Editor::status(Self) -> Status
 pub fn Editor::value(Self) -> Result[String, InputError]
 pub fn Editor::with_mask(Self, Mask) -> Result[Self, InputError]
 
+#derive(Eq, @debug.Debug)
 pub(all) struct FieldValue {
   name : String
   value : String
-} derive(Eq, @debug.Debug)
+}
 pub fn FieldValue::equal(Self, Self) -> Bool
 pub fn FieldValue::not_equal(Self, Self) -> Bool
 pub fn FieldValue::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum InputError {
   InvalidPattern(String)
-  InvalidCharacter(Int, String)
-  TooLong(Int)
+  InvalidCharacter(Int32, String)
+  TooLong(Int32)
   InvalidSelection
   InvalidConfig(String)
   InvalidValue(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn InputError::equal(Self, Self) -> Bool
 pub fn InputError::message(Self) -> String
 pub fn InputError::not_equal(Self, Self) -> Bool
@@ -97,7 +99,7 @@ pub fn InputError::to_repr(Self) -> @debug.Repr
 pub struct Mask {
   // private fields
 }
-pub fn Mask::capacity(Self) -> Int
+pub fn Mask::capacity(Self) -> Int32
 pub fn Mask::format(Self, String) -> Result[String, InputError]
 
 pub(all) enum MaskPart {
@@ -106,20 +108,22 @@ pub(all) enum MaskPart {
   Optional(String, Mask)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Selection {
-  start : Int
-  end : Int
-} derive(Eq, @debug.Debug)
+  start : Int32
+  end : Int32
+}
 pub fn Selection::equal(Self, Self) -> Bool
 pub fn Selection::not_equal(Self, Self) -> Bool
 pub fn Selection::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Status {
   Empty
   Incomplete
   Complete
   Invalid(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn Status::equal(Self, Self) -> Bool
 pub fn Status::not_equal(Self, Self) -> Bool
 pub fn Status::to_repr(Self) -> @debug.Repr

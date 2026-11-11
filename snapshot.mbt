@@ -8,8 +8,8 @@ pub fn Editor::restore(
   mask : Mask,
   raw : String,
   display : String,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   replay? : String,
 ) -> Result[Editor, InputError] {
   if raw.length() > 8192 || display.length() > 8192 {

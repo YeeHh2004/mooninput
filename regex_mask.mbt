@@ -4,33 +4,33 @@
 // states, so nested alternatives and repetitions do not cause backtracking.
 priv enum RegexSyntax {
   RegexEmpty
-  RegexAtom(Array[(Int, Int)])
+  RegexAtom(Array[(Int32, Int32)])
   RegexSequence(Array[RegexSyntax])
   RegexChoice(Array[RegexSyntax])
-  RegexRepeat(RegexSyntax, Int, Int?)
+  RegexRepeat(RegexSyntax, Int32, Int32?)
 }
 
 ///|
 priv struct RegexParser {
   chars : Array[Char]
-  limit : Int
+  limit : Int32
   case_insensitive : Bool
-  mut cursor : Int
-  mut depth : Int
+  mut cursor : Int32
+  mut depth : Int32
   mut error : String?
 }
 
 ///|
 priv struct RegexUnit {
-  ranges : Array[(Int, Int)]
-  literal : Int?
+  ranges : Array[(Int32, Int32)]
+  literal : Int32?
 }
 
 ///|
 priv enum RegexInstruction {
   RegexAccept
-  RegexConsume(Array[(Int, Int)], Int)
-  RegexFork(Int, Int)
+  RegexConsume(Array[(Int32, Int32)], Int32)
+  RegexFork(Int32, Int32)
 }
 
 ///|
@@ -40,10 +40,12 @@ priv struct RegexCompiler {
 }
 
 ///|
-fn regex_ranges_normalize(source : Array[(Int, Int)]) -> Array[(Int, Int)] {
+fn regex_ranges_normalize(
+  source : Array[(Int32, Int32)],
+) -> Array[(Int32, Int32)] {
   let sorted = source.copy()
   sorted.mut_view().sort_by((a, b) => a.0.compare(b.0))
-  let result : Array[(Int, Int)] = []
+  let result : Array[(Int32, Int32)] = []
   for range in sorted {
     if result.is_empty() {
       result.push(range)
@@ -60,9 +62,11 @@ fn regex_ranges_normalize(source : Array[(Int, Int)]) -> Array[(Int, Int)] {
 }
 
 ///|
-fn regex_ranges_complement(source : Array[(Int, Int)]) -> Array[(Int, Int)] {
+fn regex_ranges_complement(
+  source : Array[(Int32, Int32)],
+) -> Array[(Int32, Int32)] {
   let sorted = regex_ranges_normalize(source)
-  let result : Array[(Int, Int)] = []
+  let result : Array[(Int32, Int32)] = []
   // Unicode scalar values exclude the surrogate code points on both targets.
   for universe in [(0, 0xD7FF), (0xE000, 0x10FFFF)] {
     let mut cursor = universe.0
@@ -91,8 +95,8 @@ fn RegexParser::fail(self : RegexParser, message : String) -> Unit {
 ///|
 fn RegexParser::fold_ranges(
   self : RegexParser,
-  source : Array[(Int, Int)],
-) -> Array[(Int, Int)] {
+  source : Array[(Int32, Int32)],
+) -> Array[(Int32, Int32)] {
   let ranges = source.copy()
   if self.case_insensitive {
     for range in source {
@@ -112,12 +116,12 @@ fn RegexParser::fold_ranges(
 }
 
 ///|
-fn regex_literal(code : Int) -> RegexUnit {
+fn regex_literal(code : Int32) -> RegexUnit {
   { ranges: [(code, code)], literal: Some(code), }
 }
 
 ///|
-fn RegexParser::hex_escape(self : RegexParser, count : Int) -> RegexUnit {
+fn RegexParser::hex_escape(self : RegexParser, count : Int32) -> RegexUnit {
   let mut value = 0
   let mut digits = 0
   let braced = count == 4 &&
@@ -175,7 +179,7 @@ fn RegexParser::unit(self : RegexParser, in_class : Bool) -> RegexUnit {
   }
   let escaped = self.chars[self.cursor]
   self.cursor += 1
-  let ranges : Array[(Int, Int)] = match escaped {
+  let ranges : Array[(Int32, Int32)] = match escaped {
     'd' | 'D' => [(48, 57)]
     'w' | 'W' => [(48, 57), (65, 90), (95, 95), (97, 122)]
     // Deliberately ASCII whitespace; no host-dependent Unicode property tables.
@@ -205,7 +209,7 @@ fn RegexParser::unit(self : RegexParser, in_class : Bool) -> RegexUnit {
     }
     'x' => self.hex_escape(2)
     'u' => self.hex_escape(4)
-    '1'..='9' => {
+    '1'..<='9' => {
       self.fail("backreferences are unsupported")
       regex_literal(0)
     }
@@ -225,7 +229,7 @@ fn RegexParser::character_class(self : RegexParser) -> RegexSyntax {
   if negated {
     self.cursor += 1
   }
-  let ranges : Array[(Int, Int)] = []
+  let ranges : Array[(Int32, Int32)] = []
   while self.cursor < self.limit &&
         self.chars[self.cursor] != ']' &&
         self.error is None {
@@ -307,7 +311,7 @@ fn RegexParser::atom(self : RegexParser) -> RegexSyntax {
 }
 
 ///|
-fn RegexParser::count(self : RegexParser) -> Int {
+fn RegexParser::count(self : RegexParser) -> Int32 {
   let start = self.cursor
   let mut value = 0
   while self.cursor < self.limit && self.chars[self.cursor].is_ascii_digit() {
@@ -404,7 +408,7 @@ fn RegexParser::choice(self : RegexParser) -> RegexSyntax {
 }
 
 ///|
-fn RegexCompiler::push(self : RegexCompiler, state : RegexInstruction) -> Int {
+fn RegexCompiler::push(self : RegexCompiler, state : RegexInstruction) -> Int32 {
   if self.states.length() >= 2048 {
     self.exceeded = true
     return 0
@@ -418,8 +422,8 @@ fn RegexCompiler::push(self : RegexCompiler, state : RegexInstruction) -> Int {
 fn RegexCompiler::compile(
   self : RegexCompiler,
   syntax : RegexSyntax,
-  next : Int,
-) -> Int {
+  next : Int32,
+) -> Int32 {
   if self.exceeded {
     return 0
   }
@@ -478,7 +482,7 @@ fn RegexCompiler::compile(
 }
 
 ///|
-fn regex_min_units(ranges : Array[(Int, Int)]) -> Int {
+fn regex_min_units(ranges : Array[(Int32, Int32)]) -> Int32 {
   if ranges[0].0 <= 0xFFFF {
     1
   } else {
@@ -489,9 +493,11 @@ fn regex_min_units(ranges : Array[(Int, Int)]) -> Int {
 ///|
 fn regex_remaining(
   states : Array[RegexInstruction],
-  utf16? : Bool = false,
-) -> Array[Int] {
-  let parents : Array[Array[(Int, Int)]] = Array::makei(states.length(), _ => [])
+  utf16~ : Bool = false,
+) -> Array[Int32] {
+  let parents : Array[Array[(Int32, Int32)]] = Array::makei(states.length(), _ => {
+    []
+  })
   for index, state in states {
     match state {
       RegexAccept => ()
@@ -511,7 +517,7 @@ fn regex_remaining(
   // scalar or one/two UTF-16 units. Shortest paths never need a positive cycle.
   let remaining = Array::make(states.length(), 8193)
   let limit = states.length() * (if utf16 { 2 } else { 1 })
-  let buckets : Array[Array[Int]] = Array::makei(limit + 1, _ => [])
+  let buckets : Array[Array[Int32]] = Array::makei(limit + 1, _ => [])
   buckets[0].push(0)
   remaining[0] = 0
   for distance in 0..<=limit {
@@ -533,7 +539,7 @@ fn regex_remaining(
 }
 
 ///|
-fn regex_finite_capacity(syntax : RegexSyntax) -> Int? {
+fn regex_finite_capacity(syntax : RegexSyntax) -> Int32? {
   match syntax {
     RegexEmpty => Some(0)
     RegexAtom(_) => Some(1)
@@ -577,11 +583,11 @@ fn regex_finite_capacity(syntax : RegexSyntax) -> Int? {
 ///|
 fn regex_closure(
   states : Array[RegexInstruction],
-  seeds : Array[Int],
-) -> Array[Int] {
+  seeds : Array[Int32],
+) -> Array[Int32] {
   let seen = Array::make(states.length(), false)
   let pending = seeds.copy()
-  let result : Array[Int] = []
+  let result : Array[Int32] = []
   while !pending.is_empty() {
     let index = pending.pop().unwrap()
     if !seen[index] {
@@ -599,7 +605,7 @@ fn regex_closure(
 }
 
 ///|
-fn regex_class_matches(ranges : Array[(Int, Int)], code : Int) -> Bool {
+fn regex_class_matches(ranges : Array[(Int32, Int32)], code : Int32) -> Bool {
   let mut lo = 0
   let mut hi = ranges.length()
   while lo < hi {
@@ -624,13 +630,13 @@ fn regex_class_matches(ranges : Array[(Int, Int)], code : Int) -> Bool {
 // consumed scalars need exploration. Work is also capped at 262144 NFA visits.
 fn regex_joint_viable(
   states : Array[RegexInstruction],
-  initial : Array[Int],
-  scalar_budget : Int,
-  unit_budget : Int,
-  remaining : Array[Int],
-  remaining_units : Array[Int],
+  initial : Array[Int32],
+  scalar_budget : Int32,
+  unit_budget : Int32,
+  remaining : Array[Int32],
+  remaining_units : Array[Int32],
 ) -> Result[Bool, InputError] {
-  let mut seeds : Array[(Int, Int)] = initial.map(index => (0, index))
+  let mut seeds : Array[(Int32, Int32)] = initial.map(index => (0, index))
   let mut work = 262144
   let limit = scalar_budget.min(states.length())
   for steps in 0..<=limit {
@@ -642,7 +648,7 @@ fn regex_joint_viable(
     // this exact scalar count; more expensive paths cannot improve feasibility.
     seeds.mut_view().sort_by((a, b) => a.0.compare(b.0))
     let seen = Array::make(states.length(), false)
-    let frontier : Array[(Int, Int)] = []
+    let frontier : Array[(Int32, Int32)] = []
     for (cost, seed) in seeds {
       let pending = [seed]
       while !pending.is_empty() {
@@ -682,7 +688,7 @@ fn regex_joint_viable(
     if steps == limit {
       break
     }
-    let next : Array[(Int, Int)] = []
+    let next : Array[(Int32, Int32)] = []
     for (cost, index) in frontier {
       work -= 1
       if work < 0 {
@@ -711,10 +717,10 @@ fn regex_joint_viable(
 ///|
 fn regex_render(
   states : Array[RegexInstruction],
-  start : Int,
-  remaining : Array[Int],
-  remaining_units : Array[Int],
-  max_length : Int,
+  start : Int32,
+  remaining : Array[Int32],
+  remaining_units : Array[Int32],
+  max_length : Int32,
   text : String,
 ) -> Result[Render, InputError] {
   if text.length() > 8192 {
@@ -732,7 +738,7 @@ fn regex_render(
   }
   let mut active = regex_closure(states, [start])
   for c in chars {
-    let next : Array[Int] = []
+    let next : Array[Int32] = []
     for index in active {
       match states[index] {
         RegexConsume(ranges, target) =>
@@ -749,7 +755,7 @@ fn regex_render(
   }
   let mut complete = false
   let mut viable = false
-  let candidates : Array[Int] = []
+  let candidates : Array[Int32] = []
   let scalar_budget = max_length - chars.length()
   let unit_budget = 8192 - text.length()
   for index in active {
@@ -803,8 +809,8 @@ fn regex_render(
 /// is limited to 262144 NFA visits and reports InvalidValue if exhausted.
 pub fn regex(
   source : String,
-  case_insensitive? : Bool = false,
-  max_length? : Int = 8192,
+  case_insensitive~ : Bool = false,
+  max_length~ : Int32 = 8192,
 ) -> Result[Mask, InputError] {
   if max_length < 1 || max_length > 8192 {
     return Err(InvalidConfig("regex maximum length must be 1..8192 scalars"))

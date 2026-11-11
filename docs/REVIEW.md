@@ -28,7 +28,7 @@ Moonform 管理表单字段状态、验证时机和提交；MoonInput 负责字�
 
 | 验收要求 | 仓库证据与操作 |
 | --- | --- |
-| MoonBit 为主要实现语言，版本达标 | 规则、编辑转换、日期、小数和协议为 `.mbt`；[CI](../.github/workflows/ci.yml) 固定 compiler/core `0.10.14+7d59c7ec9` |
+| MoonBit 为主要实现语言，版本达标 | 规则、编辑转换、日期、小数和协议为 `.mbt`；[CI](../.github/workflows/ci.yml) 固定 compiler/core `0.10.20+65efd5b93` |
 | 公开仓库、有效提交 | [源代码与历史](https://github.com/YeeHh2004/mooninput/commits/main/)；提交对应实际功能、测试与修复 |
 | 结构清晰、核心功能完整 | [API](API.md)、[目录说明](DEVELOPMENT.md#structure)、[行为边界](BEHAVIOR.md) |
 | README 安装、使用与示例 | [README](../README.md) 的版本化安装命令、MoonBit 代码、浏览器和 CLI 步骤 |

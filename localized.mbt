@@ -1,5 +1,5 @@
 ///|
-fn compare_decimal(a : String, b : String) -> Int {
+fn compare_decimal(a : String, b : String) -> Int32 {
   fn split(value : String) -> (Bool, Array[Char], Array[Char]) {
     let chars = value.to_array()
     let mut dot = chars.length()
@@ -65,16 +65,16 @@ fn compare_decimal(a : String, b : String) -> Int {
 ///|
 /// Locale-configurable exact decimal input. Bounds and values stay decimal strings.
 pub fn number(
-  precision? : Int = 2,
-  signed? : Bool = true,
-  radix? : Char = '.',
-  group_separator? : String = ",",
-  map_radix? : String = "",
-  min? : String = "",
-  max? : String = "",
-  pad_fraction? : Bool = false,
-  normalize_zeros? : Bool = false,
-  autofix? : Bool = false,
+  precision~ : Int32 = 2,
+  signed~ : Bool = true,
+  radix~ : Char = '.',
+  group_separator~ : String = ",",
+  map_radix~ : String = "",
+  min~ : String = "",
+  max~ : String = "",
+  pad_fraction~ : Bool = false,
+  normalize_zeros~ : Bool = false,
+  autofix~ : Bool = false,
 ) -> Result[Mask, InputError] {
   if precision < 0 || precision > 18 {
     return Err(InvalidConfig("precision must be between 0 and 18"))
@@ -245,8 +245,8 @@ pub fn number(
       }
     }
     let sign = if raw.length() > 0 && raw[0] == '-' { 1 } else { 0 }
-    let starts : Array[Int] = []
-    let ends : Array[Int] = []
+    let starts : Array[Int32] = []
+    let ends : Array[Int32] = []
     let localized_raw : Array[Char] = []
     let mut display = ""
     for i, c in raw {
@@ -278,9 +278,9 @@ pub fn number(
 ///|
 /// Configurable Gregorian date ordering and inclusive ISO date bounds.
 pub fn date(
-  format? : String = "YYYY-MM-DD",
-  min? : String = "0001-01-01",
-  max? : String = "9999-12-31",
+  format~ : String = "YYYY-MM-DD",
+  min~ : String = "0001-01-01",
+  max~ : String = "9999-12-31",
 ) -> Result[Mask, InputError] {
   if format.length() > 128 {
     return Err(InvalidConfig("date format is too long"))
@@ -335,7 +335,7 @@ pub fn date(
     Ok(m) => m
     Err(_) => return Err(InvalidConfig("invalid date format literals"))
   }
-  fn key(value : String) -> Result[Int, InputError] {
+  fn key(value : String) -> Result[Int32, InputError] {
     match Editor::new(iso_date(), initial=value) {
       Ok(e) =>
         if e.status() == Complete {
@@ -422,7 +422,7 @@ pub fn date(
 }
 
 ///|
-fn date_digits(text : String) -> Int {
+fn date_digits(text : String) -> Int32 {
   let mut result = 0
   for c in text {
     result = result * 10 + c.to_int() - 48

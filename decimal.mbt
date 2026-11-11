@@ -2,9 +2,9 @@
 /// Decimal text editing. Precision limits fractional digits; it never rounds.
 /// Uses '.' as radix and optional ',' grouping. At most 256 raw characters.
 pub fn decimal(
-  precision? : Int = 2,
-  signed? : Bool = false,
-  grouped? : Bool = true,
+  precision~ : Int32 = 2,
+  signed~ : Bool = false,
+  grouped~ : Bool = true,
 ) -> Result[Mask, InputError] {
   if precision < 0 || precision > 18 {
     return Err(InvalidConfig("precision must be between 0 and 18"))
@@ -36,7 +36,7 @@ fn decimal_chars(
 ///|
 fn render_decimal(
   raw : Array[Char],
-  precision : Int,
+  precision : Int32,
   signed : Bool,
   grouped : Bool,
 ) -> Result[Render, InputError] {
@@ -63,8 +63,8 @@ fn render_decimal(
   if dot < raw.length() && raw.length() - dot - 1 > precision {
     return Err(InvalidValue("fraction exceeds configured precision"))
   }
-  let starts : Array[Int] = []
-  let ends : Array[Int] = []
+  let starts : Array[Int32] = []
+  let ends : Array[Int32] = []
   let mut display = ""
   for i, c in raw {
     if grouped && i > sign && i < dot && (dot - i) % 3 == 0 {
@@ -80,7 +80,7 @@ fn render_decimal(
 ///|
 fn parse_decimal(
   text : String,
-  precision : Int,
+  precision : Int32,
   signed : Bool,
   grouped : Bool,
 ) -> Result[Render, InputError] {

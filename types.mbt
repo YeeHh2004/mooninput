@@ -1,28 +1,31 @@
 ///|
 /// Errors never modify an existing editor.
+#derive(Eq, @debug.Debug)
 pub(all) enum InputError {
   InvalidPattern(String)
-  InvalidCharacter(Int, String)
-  TooLong(Int)
+  InvalidCharacter(Int32, String)
+  TooLong(Int32)
   InvalidSelection
   InvalidConfig(String)
   InvalidValue(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Positions use UTF-16 offsets, including on Wasm GC.
+#derive(Eq, @debug.Debug)
 pub(all) struct Selection {
-  start : Int
-  end : Int
-} derive(Eq, @debug.Debug)
+  start : Int32
+  end : Int32
+}
 
 ///|
+#derive(Eq, @debug.Debug)
 pub(all) enum Status {
   Empty
   Incomplete
   Complete
   Invalid(String)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 priv enum Slot {
@@ -37,30 +40,31 @@ priv enum Slot {
 priv struct Pattern {
   slots : Array[Slot]
   prefixes : Array[String]
-  required : Int
+  required : Int32
 }
 
 ///|
 priv enum Kind {
   PatternKind(Pattern)
   DateKind(Pattern)
-  DecimalKind(Int, Bool, Bool)
+  DecimalKind(Int32, Bool, Bool)
   ExtensionKind(Extension)
 }
 
 ///|
 priv struct Extension {
   parse : (String) -> Result[Render, InputError]
-  capacity : Int?
+  capacity : Int32?
   fragment : ((String) -> Result[Array[Char], InputError])?
 }
 
 ///|
 /// A named canonical value produced by a composite mask.
+#derive(Eq, @debug.Debug)
 pub(all) struct FieldValue {
   name : String
   value : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub struct Definition {
@@ -79,8 +83,8 @@ pub struct Mask {
 priv struct Render {
   raw : Array[Char]
   display : String
-  starts : Array[Int]
-  ends : Array[Int]
+  starts : Array[Int32]
+  ends : Array[Int32]
   state : Status?
   canonical : String?
   active : String?

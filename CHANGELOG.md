@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3
+
+- Update the verified compiler/core baseline to `0.10.20+65efd5b93` (2026-11-05); migrate deprecated derive/default-parameter/range syntax and canonical integer type names with the official formatter, and regenerate public interfaces.
+- Replace removed implicit `String.to_json()` calls with explicit `Json::string` constructors at the JSON protocol boundary. Public masking behavior and supported JS/Wasm GC targets are unchanged.
+- Record the actual compiler, core and full tool versions in generated builds instead of rejecting toolchains newer than the previous baseline. Ship the active core distribution's notices in generated artifacts and refresh the checked-in baseline notice.
+- Pin main/registry CI to the verified current toolchain and add an independent weekly/manual latest-toolchain compatibility workflow covering both backends, Node regressions, examples and a separate consumer.
+
 ## 0.2.2
 
 - Add validated replay text to immutable snapshots and the backward-compatible JSON boundary, so concealed variable-width composite partitions remain editable and recoverable. Equivalent native/browser rule updates preserve compatible snapshots and selections.

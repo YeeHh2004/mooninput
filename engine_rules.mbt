@@ -8,7 +8,7 @@ pub(all) enum MaskPart {
 }
 
 ///|
-fn rules_capacity(mask : Mask) -> Int? {
+fn rules_capacity(mask : Mask) -> Int32? {
   match mask.kind {
     PatternKind(p) | DateKind(p) => Some(p.slots.length())
     DecimalKind(_, _, _) => Some(256)
@@ -17,7 +17,7 @@ fn rules_capacity(mask : Mask) -> Int? {
 }
 
 ///|
-fn rules_text(chars : Array[Char], start : Int, end : Int) -> String {
+fn rules_text(chars : Array[Char], start : Int32, end : Int32) -> String {
   let out : Array[Char] = []
   for i in start..<end {
     out.push(chars[i])
@@ -46,7 +46,7 @@ fn rules_prefix(text : String, prefix : String) -> Bool {
 }
 
 ///|
-fn rules_padded(value : Int, width : Int) -> String {
+fn rules_padded(value : Int32, width : Int32) -> String {
   let mut text = value.to_string()
   while text.length() < width {
     text = "0" + text
@@ -58,10 +58,10 @@ fn rules_padded(value : Int, width : Int) -> String {
 /// A non-negative, fixed-width integer range. Autofix clamps each impossible
 /// prefix to the nearest viable prefix; no floating point conversion is used.
 pub fn range(
-  min : Int,
-  max : Int,
-  width? : Int = max.to_string().length(),
-  autofix? : Bool = false,
+  min : Int32,
+  max : Int32,
+  width~ : Int32 = max.to_string().length(),
+  autofix~ : Bool = false,
 ) -> Result[Mask, InputError] {
   if min < 0 ||
     min > max ||
@@ -130,7 +130,7 @@ pub fn range(
 /// Case-insensitive matching folds ASCII and displays the configured spelling.
 pub fn enumeration(
   values : Array[String],
-  case_sensitive? : Bool = true,
+  case_sensitive~ : Bool = true,
 ) -> Result[Mask, InputError] {
   if values.is_empty() || values.length() > 64 {
     return Err(InvalidConfig("enumeration needs 1..64 values"))
@@ -196,7 +196,7 @@ pub fn enumeration(
 }
 
 ///|
-fn rules_status_score(status : Status) -> Int {
+fn rules_status_score(status : Status) -> Int32 {
   match status {
     Complete => 3
     Incomplete => 2
@@ -291,7 +291,7 @@ pub fn dynamic(
 /// are not caught; callbacks must be deterministic and side-effect free.
 pub fn custom(
   validate : (String) -> Status,
-  max_length? : Int = 256,
+  max_length~ : Int32 = 256,
   prepare? : (String) -> String,
 ) -> Result[Mask, InputError] {
   if max_length < 1 || max_length > 8192 {
@@ -375,7 +375,7 @@ pub fn with_prepare(mask : Mask, prepare : (String) -> String) -> Mask {
 
 ///|
 priv struct RulesBudget {
-  mut remaining : Int
+  mut remaining : Int32
 }
 
 ///|
@@ -456,8 +456,8 @@ fn rules_literal_piece(literal : String, tail : RulesPiece) -> RulesPiece {
 fn rules_composite_walk(
   parts : Array[MaskPart],
   chars : Array[Char],
-  part : Int,
-  input : Int,
+  part : Int32,
+  input : Int32,
   formatted : Bool,
   budget : RulesBudget,
 ) -> Result[RulesPiece?, InputError] {
@@ -762,7 +762,11 @@ pub fn composite(parts : Array[MaskPart]) -> Result[Mask, InputError] {
 /// Repeat an arbitrary child mask. Each completed repetition is a numbered
 /// field. Bounds are finite (0 <= min <= max <= 32); incomplete final children
 /// remain editable and never count as completed repetitions.
-pub fn repeat(mask : Mask, min : Int, max : Int) -> Result[Mask, InputError] {
+pub fn repeat(
+  mask : Mask,
+  min : Int32,
+  max : Int32,
+) -> Result[Mask, InputError] {
   if min < 0 || min > max || max < 1 || max > 32 {
     return Err(
       InvalidConfig("repeat requires 0 <= min <= max <= 32 and max >= 1"),

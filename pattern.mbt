@@ -3,7 +3,7 @@
 /// A single optional suffix in brackets is supported. Backslash escapes literals.
 pub fn pattern(
   source : String,
-  definitions? : Array[Definition] = [],
+  definitions~ : Array[Definition] = [],
 ) -> Result[Mask, InputError] {
   if source.length() > 4096 {
     return Err(TooLong(4096))
@@ -122,7 +122,7 @@ pub fn pattern(
 fn parse_raw(
   p : Pattern,
   text : Array[Char],
-  start : Int,
+  start : Int32,
 ) -> Result[Array[Char], InputError] {
   if text.length() + start > p.slots.length() {
     return Err(TooLong(p.slots.length()))
@@ -138,7 +138,7 @@ fn parse_raw(
 }
 
 ///|
-fn matches_at(text : Array[Char], offset : Int, prefix : Array[Char]) -> Bool {
+fn matches_at(text : Array[Char], offset : Int32, prefix : Array[Char]) -> Bool {
   if offset + prefix.length() > text.length() {
     return false
   }
@@ -154,7 +154,7 @@ fn matches_at(text : Array[Char], offset : Int, prefix : Array[Char]) -> Bool {
 fn parse_pattern(
   p : Pattern,
   text : String,
-  start : Int,
+  start : Int32,
 ) -> Result[Array[Char], InputError] {
   if text.length() > 8192 {
     return Err(TooLong(8192))
@@ -190,8 +190,8 @@ fn parse_pattern(
 
 ///|
 fn render_pattern(p : Pattern, raw : Array[Char]) -> Render {
-  let starts : Array[Int] = []
-  let ends : Array[Int] = []
+  let starts : Array[Int32] = []
+  let ends : Array[Int32] = []
   let mut display = ""
   for i, c in raw {
     display += p.prefixes[i]

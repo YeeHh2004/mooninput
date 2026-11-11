@@ -13,6 +13,8 @@
 
 0.2.2 进一步覆盖隐藏显示与变长区块的组合：快照带有经过验证的重放文本，等价规则更新保留原分区；表单重置不会覆盖之后的成功写入，组合输入结束时的只读／禁用切换也会保持显示与模型一致。
 
+0.2.3 更新至 2026-11-11 官方工具链，迁移已弃用语法并修复 JSON 协议构造器调用；构建记录实际编译器版本，另加每周 latest 兼容检查。具体复现结果见[11 月维护记录](docs/MAINTENANCE-2026-11.md)。
+
 ## 可以解决什么问题
 
 - **多规格标识与批量录入：** 动态选择短码／长码，以自定义字符定义、命名区块和有限重复表达业务格式。
@@ -24,10 +26,10 @@
 
 ## 安装
 
-可复现基线：MoonBit compiler/core **`0.10.14+7d59c7ec9`**，支持 **JS、Wasm GC**。使用 `moon version --all` 核对版本，固定工具链步骤见[开发说明](docs/DEVELOPMENT.md)。
+2026-11-11 维护基线：MoonBit compiler/core **`0.10.20+65efd5b93`**，支持 **JS、Wasm GC**。使用 `moon version --all` 核对版本，固定工具链步骤见[开发说明](docs/DEVELOPMENT.md)。主 CI 固定该版本；[每周兼容检查](.github/workflows/compatibility.yml) 另外使用官方 latest compiler/core，及时发现更新带来的问题。
 
 ```sh
-moon add YeeHh2004/mooninput@0.2.2
+moon add YeeHh2004/mooninput@0.2.3
 ```
 
 在 `moon.pkg` 中导入：
@@ -116,7 +118,7 @@ moon run examples/basic --target wasm-gc
 
 无需安装 MoonBit 的体验方式：下载 [Release](https://github.com/YeeHh2004/mooninput/releases/latest) 的对应版本预编译包，解压后使用 **Node.js 22+** 运行 `node scripts/serve.mjs`。包内附源码、许可证、编译信息和校验和。
 
-从源码构建需要 Node.js 22+ 和上述固定 MoonBit 版本，运行时无需 npm 依赖：
+从源码构建需要 Node.js 22+，推荐上述已验证的 MoonBit 版本，运行时无需 npm 依赖：
 
 ```sh
 git clone https://github.com/YeeHh2004/mooninput.git

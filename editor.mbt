@@ -21,7 +21,7 @@ fn Mask::render_input(self : Mask, text : String) -> Result[Render, InputError] 
 /// Create a snapshot from raw or formatted text. Selection starts at the end.
 pub fn Editor::new(
   mask : Mask,
-  initial? : String = "",
+  initial~ : String = "",
 ) -> Result[Editor, InputError] {
   match mask.render_input(initial) {
     Err(e) => Err(e)
@@ -79,7 +79,7 @@ pub fn Editor::status(self : Editor) -> Status {
 }
 
 ///|
-fn Render::snap(self : Render, offset : Int, upward : Bool) -> Int {
+fn Render::snap(self : Render, offset : Int32, upward : Bool) -> Int32 {
   for i, start in self.starts {
     let end = self.ends[i]
     if offset > start && offset < end {
@@ -103,8 +103,8 @@ fn Render::snap(self : Render, offset : Int, upward : Bool) -> Int {
 /// a collapsed caret inside a surrogate pair snaps to its beginning.
 pub fn Editor::select(
   self : Editor,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> Result[Editor, InputError] {
   if start < 0 || end < start || end > self.display().length() {
     return Err(InvalidSelection)
@@ -118,8 +118,8 @@ pub fn Editor::select(
 /// Map a display UTF-16 offset to an editable scalar index.
 pub fn Editor::raw_index(
   self : Editor,
-  offset : Int,
-) -> Result[Int, InputError] {
+  offset : Int32,
+) -> Result[Int32, InputError] {
   if offset < 0 || offset > self.display().length() {
     return Err(InvalidSelection)
   }
@@ -138,8 +138,8 @@ pub fn Editor::raw_index(
 /// Map an editable scalar boundary to a display UTF-16 position.
 pub fn Editor::display_offset(
   self : Editor,
-  index : Int,
-) -> Result[Int, InputError] {
+  index : Int32,
+) -> Result[Int32, InputError] {
   if index < 0 || index > self.render.raw.length() {
     return Err(InvalidSelection)
   }
@@ -149,8 +149,8 @@ pub fn Editor::display_offset(
 ///|
 fn Editor::replace_raw(
   self : Editor,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
   text : String,
 ) -> Result[Editor, InputError] {
   if start == end && text == "" {
@@ -225,8 +225,8 @@ fn Editor::replace_raw(
 pub fn Editor::insert(
   self : Editor,
   text : String,
-  overwrite? : Bool = false,
-  skip_invalid? : Bool = false,
+  overwrite~ : Bool = false,
+  skip_invalid~ : Bool = false,
 ) -> Result[Editor, InputError] {
   if text.length() > 8192 {
     return Err(TooLong(8192))

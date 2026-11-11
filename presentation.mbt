@@ -2,8 +2,8 @@
 /// Copy a display while concealing editable scalars. Generated literals retain
 /// their original spelling; starts/ends follow the replacement UTF-16 widths.
 fn conceal_render(render : Render, concealed : Char) -> Render {
-  let starts : Array[Int] = []
-  let ends : Array[Int] = []
+  let starts : Array[Int32] = []
+  let ends : Array[Int32] = []
   let mut display = ""
   let mut editable = 0
   for offset, c in render.display.iter2() {
@@ -27,8 +27,8 @@ fn present_pattern(
   concealed : Char?,
   eager : Bool,
 ) -> Render {
-  let starts : Array[Int] = []
-  let ends : Array[Int] = []
+  let starts : Array[Int32] = []
+  let ends : Array[Int32] = []
   let mut display = ""
   for i, c in render.raw {
     display += pattern.prefixes[i]
@@ -62,7 +62,7 @@ pub fn presentation(
   mask : Mask,
   placeholder? : Char,
   concealed? : Char,
-  eager? : Bool = false,
+  eager~ : Bool = false,
 ) -> Result[Mask, InputError] {
   match placeholder {
     Some(c) =>

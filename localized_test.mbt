@@ -62,7 +62,7 @@ test "localized exact bounds distinguish adjacent values beyond binary floating 
 
 ///|
 test "localized decimal bounds and clamping match an exhaustive integer cents oracle" {
-  fn cents_text(cents : Int) -> String {
+  fn cents_text(cents : Int32) -> String {
     let amount = if cents < 0 { -cents } else { cents }
     let mut fraction = (amount % 100).to_string()
     if fraction.length() == 1 {

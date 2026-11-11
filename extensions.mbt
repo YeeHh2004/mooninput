@@ -2,8 +2,8 @@
 fn make_render(
   raw : Array[Char],
   display : String,
-  starts : Array[Int],
-  ends : Array[Int],
+  starts : Array[Int32],
+  ends : Array[Int32],
 ) -> Render {
   {
     raw,
@@ -22,12 +22,12 @@ fn make_render(
 fn text_render(
   text : String,
   status : Status,
-  value? : String = text,
-  active? : String = "",
-  fields? : Array[FieldValue] = [],
+  value~ : String = text,
+  active~ : String = "",
+  fields~ : Array[FieldValue] = [],
 ) -> Render {
-  let starts : Array[Int] = []
-  let ends : Array[Int] = []
+  let starts : Array[Int32] = []
+  let ends : Array[Int32] = []
   for offset, c in text.iter2() {
     starts.push(offset)
     ends.push(offset + c.utf16_len())
@@ -52,7 +52,7 @@ fn text_render(
 ///|
 fn extension(
   parse : (String) -> Result[Render, InputError],
-  capacity? : Int = 8192,
+  capacity~ : Int32 = 8192,
   fragment? : (String) -> Result[Array[Char], InputError],
 ) -> Mask {
   { kind: ExtensionKind({ parse, capacity: Some(capacity), fragment, }), }
@@ -112,14 +112,14 @@ fn enrich_render(render : Render, mask : Mask) -> Render {
 pub fn definition(
   token : Char,
   accept : (Char) -> Bool,
-  normalize? : (Char) -> Char = c => c,
+  normalize~ : (Char) -> Char = c => c,
 ) -> Definition {
   { token, accept, normalize, }
 }
 
 ///|
 /// Maximum editable Unicode scalars, useful when composing masks.
-pub fn Mask::capacity(self : Mask) -> Int {
+pub fn Mask::capacity(self : Mask) -> Int32 {
   match self.kind {
     PatternKind(p) | DateKind(p) => p.slots.length()
     DecimalKind(_, _, _) => 256
@@ -173,7 +173,7 @@ pub fn Editor::with_mask(
 pub fn pipe(
   mask : Mask,
   text : String,
-  unmask? : Bool = false,
+  unmask~ : Bool = false,
 ) -> Result[String, InputError] {
   match Editor::new(mask, initial=text) {
     Err(e) => Err(e)

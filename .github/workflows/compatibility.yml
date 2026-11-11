@@ -1,0 +1,35 @@
+name: Rolling MoonBit compatibility
+on:
+  schedule:
+    - cron: '30 2 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  latest:
+    name: Latest MoonBit / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: hustcer/setup-moonbit@9199da0ab63ea0c0bab1dc15f03d76e17ed4f75f # v1.22
+        with:
+          version: latest
+          core-version: latest
+      - run: moon version --all
+      - run: moon check --target js --deny-warn
+      - run: moon check --target wasm-gc --deny-warn
+      - run: moon build --target wasm-gc
+      - run: node scripts/build.mjs
+      - run: moon test --target js --deny-warn
+      - run: moon test --target wasm-gc --deny-warn
+      - run: node --test tests/*.test.mjs
+      - run: node scripts/check-examples.mjs
+      - run: node scripts/check-consumer.mjs

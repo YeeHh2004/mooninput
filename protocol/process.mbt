@@ -1,16 +1,17 @@
 ///|
+#derive(@json.FromJson)
 priv struct Config {
   kind : String
   pattern : String?
-  precision : Int?
+  precision : Int32?
   signed : Bool?
   grouped : Bool?
   definitions : Array[TokenConfig]?
   source : String?
   caseInsensitive : Bool?
-  from : Int?
-  to : Int?
-  width : Int?
+  from : Int32?
+  to : Int32?
+  width : Int32?
   autofix : Bool?
   values : Array[String]?
   caseSensitive : Bool?
@@ -20,8 +21,8 @@ priv struct Config {
   parts : Array[Config]?
   literal : String?
   rule : Config?
-  minRepeat : Int?
-  maxRepeat : Int?
+  minRepeat : Int32?
+  maxRepeat : Int32?
   radix : String?
   groupSeparator : String?
   mapRadix : String?
@@ -32,8 +33,8 @@ priv struct Config {
   format : String?
   allowed : String?
   equals : String?
-  minLength : Int?
-  maxLength : Int?
+  minLength : Int32?
+  maxLength : Int32?
   placeholder : String?
   concealed : String?
   eager : Bool?
@@ -41,26 +42,28 @@ priv struct Config {
   commit : String?
   overwrite : Bool?
   skipInvalid : Bool?
-} derive(@json.FromJson)
+}
 
 ///|
+#derive(@json.FromJson)
 priv struct TokenConfig {
   token : String
   characters : String
   uppercase : Bool?
-} derive(@json.FromJson)
+}
 
 ///|
+#derive(@json.FromJson)
 priv struct Request {
   config : Config
   value : String
   display : String?
   replay : String?
   op : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   text : String
-} derive(@json.FromJson)
+}
 
 ///|
 fn scalar(text : String) -> Result[Char, @input.InputError] {
@@ -106,7 +109,7 @@ fn transform(text : String, mode : String) -> String {
 ///|
 fn configure(
   config : Config,
-  depth? : Int = 0,
+  depth~ : Int32 = 0,
 ) -> Result[@input.Mask, @input.InputError] {
   if depth > 16 {
     return Err(@input.InvalidConfig("rule nesting exceeds 16"))
@@ -397,7 +400,7 @@ fn snapshot(editor : @input.Editor) -> Json {
     @input.Invalid(reason) => ("invalid", reason)
   }
   let value : Json = match editor.value() {
-    Ok(value) => value.to_json()
+    Ok(value) => Json::string(value)
     Err(_) => Json::null()
   }
   {
@@ -410,7 +413,7 @@ fn snapshot(editor : @input.Editor) -> Json {
     "reason": reason,
     "value": value,
     "active": match editor.active_mask() {
-      Some(name) => name.to_json()
+      Some(name) => Json::string(name)
       None => Json::null()
     },
     "fields": editor

@@ -5,8 +5,8 @@
 pub fn Editor::reconcile(
   self : Editor,
   text : String,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> Result[Editor, InputError] {
   let limit = match self.mask.kind {
     DecimalKind(_, _, _) => 512
@@ -87,7 +87,7 @@ pub fn Editor::reconcile(
       before_end.push(c)
     }
   }
-  fn mapped(chars : Array[Char]) -> Int {
+  fn mapped(chars : Array[Char]) -> Int32 {
     let prefix = String::from_array(chars)
     match self.mask.kind {
       DecimalKind(_, _, grouped) =>
